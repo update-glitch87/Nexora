@@ -5,8 +5,30 @@ const baseHandler = serverless(app, {
   binary: ['image/*', 'application/pdf'],
 });
 
+let readyPromise = null;
+function ensureReady() {
+  if (!readyPromise) {
+    readyPromise = app.ready().catch((err) => {
+      readyPromise = null;
+      throw err;
+    });
+  }
+  return readyPromise;
+}
+
 // Netlify rewrite /api/* → function with :splat (drops /api). Restore it for Express.
 exports.handler = async (event, context) => {
+  try {
+    await ensureReady();
+  } catch (err) {
+    console.error('[api] DB init failed:', err);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Database failed to start', detail: String(err.message || err) }),
+    };
+  }
+
   const raw = event.rawPath || event.path || '';
   if (raw && !raw.startsWith('/api') && !raw.startsWith('/.netlify')) {
     event.path = '/api' + (raw.startsWith('/') ? raw : `/${raw}`);
@@ -16,5 +38,15 @@ exports.handler = async (event, context) => {
     event.path = rest.startsWith('/api') ? rest : `/api${rest === '/' ? '' : rest}`;
     if (event.rawPath) event.rawPath = event.path;
   }
-  return baseHandler(event, context);
+
+  try {
+    return await baseHandler(event, context);
+  } catch (err) {
+    console.error('[api] handler error:', err);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Request failed', detail: String(err.message || err) }),
+    };
+  }
 };

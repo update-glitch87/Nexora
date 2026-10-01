@@ -8,12 +8,13 @@
     "dev": "node --watch server/server.js"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=18"
   },
   "dependencies": {
     "express": "^4.21.2",
     "multer": "^2.0.1",
     "serverless-http": "^4.0.0",
+    "sql.js": "^1.14.2",
     "uuid": "^11.1.0"
   }
 }

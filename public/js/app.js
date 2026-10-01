@@ -45,18 +45,24 @@ async function api(url, options = {}) {
     const res = await fetch(url, opts);
     let data = {};
     const text = await res.text();
-    try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text || 'Request failed' }; }
+    try { data = text ? JSON.parse(text) : {}; } catch {
+      data = { error: text?.slice(0, 120) || `Request failed (${res.status})` };
+    }
 
     if (!res.ok) {
       if (res.status === 401 && url.includes('/api/admin/') && !url.includes('/login')) {
         adminToken = null;
         localStorage.removeItem('nexorago_admin_token');
       }
-      throw new Error(data.error || 'Request failed');
+      const msg = data.error || data.detail || `Request failed (${res.status})`;
+      throw new Error(typeof msg === 'string' ? msg : 'Request failed');
     }
     return data;
   } catch (err) {
-    showToast(err.message, 'error');
+    const message = err.message === 'Failed to fetch'
+      ? 'Cannot reach API — check Netlify function deploy'
+      : err.message;
+    showToast(message, 'error');
     throw err;
   }
 }

@@ -562,13 +562,24 @@ if (!IS_NETLIFY) {
   });
 }
 
+async function ready() {
+  await db.initDb();
+  return app;
+}
+
 module.exports = app;
+module.exports.ready = ready;
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  const HOST = process.env.HOST || '0.0.0.0';
-  app.listen(PORT, HOST, () => {
-    console.log(`\n  NexoraGo live at http://localhost:${PORT}`);
-    console.log(`  Bound to ${HOST}:${PORT}\n`);
+  ready().then(() => {
+    const PORT = process.env.PORT || 3000;
+    const HOST = process.env.HOST || '0.0.0.0';
+    app.listen(PORT, HOST, () => {
+      console.log(`\n  NexoraGo live at http://localhost:${PORT}`);
+      console.log(`  Bound to ${HOST}:${PORT}\n`);
+    });
+  }).catch((err) => {
+    console.error('[NexoraGo] Failed to start:', err);
+    process.exit(1);
   });
 }

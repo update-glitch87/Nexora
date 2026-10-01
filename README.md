@@ -8,11 +8,11 @@ Professional visa assessment platform: choose a destination, submit a short form
 - One-page short assessment form (no prices in the user flow)
 - Tracking ID with copy + Track page
 - Admin approve unlocks KYC; dummy card fee ($1 / $10 / $100) then document upload
-- SQLite storage via Node.js built-in `node:sqlite` (Node 22+)
+- SQLite storage via `sql.js` (works locally and on Netlify Functions)
 
 ## Requirements
 
-- Node.js **22.5+** (for `node:sqlite`)
+- Node.js **18+**
 
 ## Quick start
 
