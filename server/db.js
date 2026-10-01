@@ -2,6 +2,28 @@ const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const appsStore = require('./apps-store');
+const turso = require('./turso');
+
+/** Load local .env without a dependency (never commit secrets) */
+(function loadDotEnv() {
+  try {
+    const envPath = path.join(__dirname, '..', '.env');
+    if (!fs.existsSync(envPath)) return;
+    for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq < 1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (key && process.env[key] === undefined) process.env[key] = val;
+    }
+  } catch { /* ignore */ }
+})();
 
 const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY_BLOBS_CONTEXT);
 const DATA_DIR = process.env.DATA_DIR
@@ -99,15 +121,25 @@ async function savePersistentBytes(bytes) {
   }
 
   const store = getBlobStore();
-  if (!store) {
-    if (IS_NETLIFY) console.error('[DB] WARNING: could not save applications to Blobs');
-    return;
+  if (store) {
+    try {
+      await store.set(BLOB_KEY, bytes);
+      console.log(`[DB] Saved ${bytes.byteLength || bytes.length} bytes to Netlify Blobs (sqlite)`);
+    } catch (err) {
+      console.error('[DB] sqlite Blob save failed:', err.message);
+    }
+  } else if (IS_NETLIFY) {
+    console.error('[DB] WARNING: sqlite Blobs store null');
   }
-  try {
-    await store.set(BLOB_KEY, bytes);
-    console.log(`[DB] Saved ${bytes.byteLength || bytes.length} bytes to Netlify Blobs`);
-  } catch (err) {
-    console.error('[DB] Blob save failed:', err.message);
+
+  // JSON backup of applications (Blobs / disk)
+  const live = _db;
+  if (live) {
+    try {
+      await appsStore.saveAppsBackup(live);
+    } catch (err) {
+      console.error('[DB] apps backup failed:', err.message);
+    }
   }
 }
 
@@ -120,6 +152,14 @@ function queuePersist(bytes) {
 
 async function flushPersist() {
   await _persistChain;
+  // Turso push once at flush (not on every seed INSERT)
+  if (_db && turso.hasTursoConfig()) {
+    try {
+      await turso.pushAppsFromDb(_db);
+    } catch (err) {
+      console.error('[DB] Turso push failed:', err.message);
+    }
+  }
 }
 
 /** Wrap sql.js so call sites can keep using DatabaseSync-style prepare().get/all/run */
@@ -511,7 +551,10 @@ function seed(db) {
   const orders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
   console.log(`[DB] Seeded ${count} visas, ${jobs} jobs | applications stored: ${orders}`);
   console.log(`[DB] Admin login: ${adminUser} / (set ADMIN_PASS to change)`);
-  console.log(`[DB] Persistence: ${IS_NETLIFY ? 'Netlify Blobs + /tmp' : 'local disk'}`);
+  const persistence = turso.hasTursoConfig()
+    ? 'turso'
+    : (IS_NETLIFY ? 'netlify-blobs+/tmp' : 'local-disk');
+  console.log(`[DB] Persistence: ${persistence}`);
 }
 
 
@@ -528,12 +571,38 @@ async function initDb() {
 
     const fileBytes = await loadPersistentBytes();
     const db = wrapSqlJs(SQL, fileBytes);
+    // Assign early so persist() can backup applications during seed/writes
+    _db = db;
     migrateIfNeeded(db);
     createSchema(db);
     seed(db);
-    // Ensure initial seed is flushed to Blobs
+
+    // 1) Turso first (durable source of truth)
+    if (turso.hasTursoConfig()) {
+      try {
+        await turso.ensureSchema();
+        await turso.pullAppsIntoDb(db);
+      } catch (err) {
+        console.error('[DB] Turso pull failed:', err.message);
+      }
+    } else {
+      console.warn('[DB] TURSO_DATABASE_URL / TURSO_AUTH_TOKEN not set — apps may not survive redeploy');
+    }
+
+    // 2) JSON blob backup fallback
+    try {
+      const backup = await appsStore.loadAppsBackup();
+      if (backup) {
+        const n = appsStore.restoreAppsIntoDb(db, backup);
+        if (n > 0) await appsStore.saveAppsBackup(db);
+      }
+    } catch (err) {
+      console.error('[DB] apps restore failed:', err.message);
+    }
+
     await db.flushPersist();
-    _db = db;
+    const orders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
+    console.log(`[DB] Ready — applications: ${orders} (backend: ${turso.hasTursoConfig() ? 'turso' : 'local/blobs'})`);
     return _db;
   })();
 

@@ -8,7 +8,7 @@ Professional visa assessment platform: choose a destination, submit a short form
 - One-page short assessment form (no prices in the user flow)
 - Tracking ID with copy + Track page
 - Admin approve unlocks KYC; dummy card fee ($1 / $10 / $100) then document upload
-- SQLite via `sql.js` — on Netlify, applications are saved to **Netlify Blobs** (durable across redeploys)
+- SQLite via `sql.js` in-process, with **Turso** as the durable store for applications (orders survive Netlify redeploys)
 
 ## Requirements
 
@@ -66,7 +66,15 @@ This app is set up for **Netlify**: static `public/` + serverless Express API.
 After deploy, open your `*.netlify.app` URL.
 
 **Notes**
-- Application form data is stored in **Netlify Blobs** and must survive every update/redeploy.
+### Required: Turso (so applications never disappear)
+
+1. Create a free DB at [turso.tech](https://turso.tech)
+2. In **Netlify → Site settings → Environment variables**, add:
+   - `TURSO_DATABASE_URL` = `libsql://…turso.io`
+   - `TURSO_AUTH_TOKEN` = your token
+3. Redeploy the site after saving variables
+
+Without these, applications can reset when Netlify cold-starts.
 - Migrations are additive only — `orders` / `kyc_verifications` are protected and cannot be dropped by updates.
 - KYC uploaded files still use `/tmp` on Netlify (file binaries can reset); the application records themselves stay.
 - Local still works with `npm start` (Express on port 3000).

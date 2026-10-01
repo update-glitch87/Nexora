@@ -55,6 +55,8 @@ function toggleNav() {
 
 async function api(url, options = {}) {
   const opts = { ...options };
+  const silent = !!opts.silent;
+  delete opts.silent;
   const headers = { ...(options.headers || {}) };
   const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
   if (!isFormData && !headers['Content-Type'] && opts.body) {
@@ -81,10 +83,12 @@ async function api(url, options = {}) {
     }
     return data;
   } catch (err) {
-    const message = err.message === 'Failed to fetch'
-      ? 'Cannot reach API — check Netlify function deploy'
-      : err.message;
-    showToast(message, 'error');
+    if (!silent) {
+      const message = err.message === 'Failed to fetch'
+        ? 'Cannot reach API — check Netlify function deploy'
+        : err.message;
+      showToast(message, 'error');
+    }
     throw err;
   }
 }
@@ -816,10 +820,13 @@ async function trackOrder() {
     showToast('Enter your reference ID', 'warning');
     return;
   }
+  const resultBox = document.getElementById('track-result');
   try {
     const order = await api(`/api/orders/track/${encodeURIComponent(orderId)}`);
     displayTrackResult(order);
-  } catch (e) { /* handled */ }
+  } catch (e) {
+    if (resultBox) resultBox.innerHTML = '';
+  }
 }
 
 async function adminLogin(e) {

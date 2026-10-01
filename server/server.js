@@ -93,11 +93,14 @@ app.get('/api/health', (req, res) => {
   try {
     applications = Number(db.prepare('SELECT COUNT(*) as c FROM orders').get()?.c || 0);
   } catch { /* ignore */ }
+  const hasTurso = !!(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
   res.json({
     ok: true,
     service: 'NexoraGo',
     applications,
-    persistence: (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) ? 'netlify-blobs' : 'local-disk',
+    persistence: hasTurso
+      ? 'turso'
+      : ((process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) ? 'netlify-blobs' : 'local-disk'),
     time: new Date().toISOString(),
   });
 });
@@ -254,15 +257,6 @@ app.post('/api/orders', async (req, res) => {
   });
 });
 
-app.get('/api/orders/:id', (req, res) => {
-  const order = db.prepare(`
-    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type, v.processing_days
-    FROM orders o JOIN visas v ON o.visa_id = v.id WHERE o.id = ?
-  `).get(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found' });
-  res.json(order);
-});
-
 app.get('/api/orders/track/:orderId', (req, res) => {
   const q = decodeURIComponent(String(req.params.orderId || '')).trim();
   if (!q) return res.status(400).json({ error: 'Order ID required' });
@@ -290,6 +284,19 @@ app.get('/api/orders/track/:orderId', (req, res) => {
 
   const fee = Number(order.amount) > 0 ? Number(order.amount) : kycFeeFor(order, order);
   res.json({ ...order, kyc_fee: fee });
+});
+
+app.get('/api/orders/:id', (req, res) => {
+  // Avoid treating "track" as an order id
+  if (String(req.params.id).toLowerCase() === 'track') {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+  const order = db.prepare(`
+    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type, v.processing_days
+    FROM orders o JOIN visas v ON o.visa_id = v.id WHERE o.id = ?
+  `).get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  res.json(order);
 });
 
 app.get('/api/orders/:id/kyc-fee', (req, res) => {
