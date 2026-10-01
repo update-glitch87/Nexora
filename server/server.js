@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const db = require('./db');
+const { DESTINATION_CITIES, HOME_CITIES, JOB_TITLES } = require('./cities');
 
 const app = express();
 const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -91,6 +92,45 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'NexoraGo', time: new Date().toISOString() });
 });
 
+app.get('/api/cities', (req, res) => {
+  const code = String(req.query.country || '').toUpperCase();
+  if (code) {
+    return res.json({
+      country_code: code,
+      cities: DESTINATION_CITIES[code] || [],
+      home_cities: HOME_CITIES,
+      job_titles: JOB_TITLES,
+    });
+  }
+  res.json({
+    destinations: DESTINATION_CITIES,
+    home_cities: HOME_CITIES,
+    job_titles: JOB_TITLES,
+  });
+});
+
+app.get('/api/jobs', (req, res) => {
+  const { country, city, category, q } = req.query;
+  let sql = 'SELECT * FROM jobs WHERE active = 1';
+  const params = [];
+  if (country) { sql += ' AND country_code = ?'; params.push(String(country).toUpperCase()); }
+  if (city) { sql += ' AND city = ?'; params.push(city); }
+  if (category) { sql += ' AND category = ?'; params.push(category); }
+  if (q) {
+    sql += ' AND (title LIKE ? OR company LIKE ? OR city LIKE ? OR country_name LIKE ?)';
+    const like = `%${q}%`;
+    params.push(like, like, like, like);
+  }
+  sql += ' ORDER BY country_name, city, title';
+  res.json(db.prepare(sql).all(...params));
+});
+
+app.get('/api/jobs/:id', (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ? AND active = 1').get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
+});
+
 app.get('/api/visas', (req, res) => {
   const { country, category, search, popular } = req.query;
   let sql = 'SELECT * FROM visas WHERE 1=1';
@@ -130,6 +170,7 @@ app.post('/api/orders', (req, res) => {
     education, work_experience, language, notes,
     visa_duration, purpose, occupation, employment_status,
     id_type, id_number, net_worth, annual_income, trip_funds,
+    current_city, preferred_city, job_id, target_job,
   } = req.body;
 
   if (!visa_id || !applicant_name || !applicant_email || !applicant_phone || !passport_number || !travel_date) {
@@ -144,6 +185,9 @@ app.post('/api/orders', (req, res) => {
   if (!net_worth || !annual_income || !trip_funds) {
     return res.status(400).json({ error: 'Please complete financial profile' });
   }
+  if (!current_city || !preferred_city) {
+    return res.status(400).json({ error: 'Please select your current city and preferred destination city' });
+  }
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicant_email);
   if (!emailOk) return res.status(400).json({ error: 'Invalid email address' });
@@ -155,6 +199,14 @@ app.post('/api/orders', (req, res) => {
   const visa = db.prepare('SELECT * FROM visas WHERE id = ?').get(visa_id);
   if (!visa) return res.status(404).json({ error: 'Visa not found' });
 
+  let linkedJobId = job_id ? Number(job_id) : null;
+  let jobTitle = target_job || occupation;
+  if (linkedJobId) {
+    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(linkedJobId);
+    if (job) jobTitle = job.title;
+    else linkedJobId = null;
+  }
+
   const orderNumber = `VSA-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
   const id = uuidv4();
   const ageVal = age != null ? Number(age) : null;
@@ -163,15 +215,17 @@ app.post('/api/orders', (req, res) => {
   db.prepare(`
     INSERT INTO orders (
       id, order_number, visa_id, applicant_name, applicant_email, applicant_phone,
-      passport_number, travel_date, nationality, age, date_of_birth, residence, education,
-      work_experience, language, visa_duration, purpose, occupation, employment_status,
+      passport_number, travel_date, nationality, age, date_of_birth, residence,
+      current_city, preferred_city, job_id, target_job,
+      education, work_experience, language, visa_duration, purpose, occupation, employment_status,
       id_type, id_number, net_worth, annual_income, trip_funds, notes,
       payment_method, payment_status, amount
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'card', 'pending', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'card', 'pending', ?)
   `).run(
     id, orderNumber, visa_id, applicant_name, applicant_email, applicant_phone || '',
-    passport_number, travel_date, nationality, ageVal, date_of_birth, residence, education,
-    work_experience, language, visa_duration, purpose, occupation, employment_status,
+    passport_number, travel_date, nationality, ageVal, date_of_birth, residence,
+    current_city, preferred_city, linkedJobId, jobTitle,
+    education, work_experience, language, visa_duration, purpose, occupation, employment_status,
     id_type, id_number, net_worth, annual_income, trip_funds, notes || '',
     kycFee
   );
@@ -555,7 +609,56 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
   const pendingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE order_status = 'pending'").get().c;
   const processingOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE order_status = 'processing'").get().c;
   const completedOrders = db.prepare("SELECT COUNT(*) as c FROM orders WHERE order_status = 'completed'").get().c;
-  res.json({ totalOrders, pendingOrders, processingOrders, completedOrders });
+  const totalJobs = db.prepare('SELECT COUNT(*) as c FROM jobs WHERE active = 1').get().c;
+  const totalVisas = db.prepare('SELECT COUNT(*) as c FROM visas').get().c;
+  res.json({ totalOrders, pendingOrders, processingOrders, completedOrders, totalJobs, totalVisas });
+});
+
+app.get('/api/admin/jobs', requireAdmin, (req, res) => {
+  res.json(db.prepare('SELECT * FROM jobs ORDER BY created_at DESC').all());
+});
+
+app.post('/api/admin/jobs', requireAdmin, (req, res) => {
+  const {
+    title, company, country_code, country_name, city, category,
+    salary_range, description, visa_support = 1, active = 1,
+  } = req.body || {};
+  if (!title || !company || !country_code || !city || !category || !description) {
+    return res.status(400).json({ error: 'Missing required job fields' });
+  }
+  const result = db.prepare(`
+    INSERT INTO jobs (title, company, country_code, country_name, city, category, salary_range, visa_support, description, active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    title, company, String(country_code).toUpperCase(), country_name || country_code, city, category,
+    salary_range || '', visa_support ? 1 : 0, description, active ? 1 : 0
+  );
+  res.status(201).json({ id: Number(result.lastInsertRowid), message: 'Job added' });
+});
+
+app.patch('/api/admin/jobs/:id', requireAdmin, (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  const fields = ['title', 'company', 'country_code', 'country_name', 'city', 'category', 'salary_range', 'description', 'visa_support', 'active'];
+  const updates = [];
+  const params = [];
+  for (const f of fields) {
+    if (req.body[f] !== undefined) {
+      updates.push(`${f} = ?`);
+      let val = req.body[f];
+      if (f === 'visa_support' || f === 'active') val = val ? 1 : 0;
+      if (f === 'country_code') val = String(val).toUpperCase();
+      params.push(val);
+    }
+  }
+  if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
+  db.prepare(`UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`).run(...params, req.params.id);
+  res.json({ message: 'Job updated' });
+});
+
+app.delete('/api/admin/jobs/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Job deleted' });
 });
 
 app.post('/api/admin/visas', requireAdmin, (req, res) => {

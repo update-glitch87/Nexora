@@ -10,7 +10,7 @@ const DATA_DIR = process.env.DATA_DIR
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 function hashPassword(pw) {
   return crypto.createHash('sha256').update(pw).digest('hex');
@@ -77,34 +77,6 @@ function wrapSqlJs(SQL, fileBytes) {
   return { prepare, exec, _raw: raw, _persist: persist };
 }
 
-const VISA_DATA = [
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Express Entry (PR)', category: 'work', price: 0, processing: 180, validity: 1825, entries: 'Permanent', reqs: ['Valid passport', 'IELTS / CELPIP', 'ECA education assessment', 'Work experience proof', 'Proof of funds', 'Police clearance'], desc: 'Canada ranks #1 for Indian migrants. Express Entry (FSW, CEC, FST) and PNP pathways to permanent residency with strong diaspora networks.', popular: 1 },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Visitor Visa (TRV)', category: 'tourist', price: 0, processing: 21, validity: 3650, entries: 'Multiple', reqs: ['Valid passport', 'Proof of funds', 'Employment letter', 'Travel history', 'Digital photo'], desc: 'Canadian Temporary Resident Visa for tourism and visiting family. Usually valid up to 10 years.', popular: 1 },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Study Permit', category: 'student', price: 0, processing: 30, validity: 3650, entries: 'Multiple', reqs: ['Letter of acceptance', 'Proof of funds', 'Language test', 'SOP'], desc: 'Canadian study permit for designated learning institutions. Includes work rights during studies.', popular: 0 },
-
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'EU Blue Card', category: 'work', price: 0, processing: 60, validity: 1460, entries: 'Multiple', reqs: ['Job offer in Germany', 'Degree recognition', 'Salary threshold proof', 'Valid passport', 'Health insurance'], desc: 'Leading European choice for Indian engineers and IT professionals. EU Blue Card for skilled workers with efficient processing.', popular: 1 },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'Skilled Worker Visa', category: 'work', price: 0, processing: 60, validity: 1460, entries: 'Multiple', reqs: ['Job contract', 'Qualification recognition', 'German language (if required)', 'Passport'], desc: 'Germany skilled worker pathway for qualified professionals outside Blue Card salary thresholds.', popular: 1 },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'Schengen Visa (C)', category: 'tourist', price: 0, processing: 10, validity: 180, entries: 'Single/Multiple', reqs: ['Travel insurance (€30k)', 'Bank statements', 'Hotel booking', 'Flight reservation'], desc: 'Short-stay Schengen visa for Germany and 29 European countries. Up to 90 days in 180.', popular: 0 },
-
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Skilled Worker Visa', category: 'work', price: 0, processing: 21, validity: 1825, entries: 'Multiple', reqs: ['Certificate of Sponsorship', 'English proof', 'Salary meets threshold', 'Passport'], desc: 'Highly favored for its large Indian community. Skilled Worker route for sponsored employment in the UK.', popular: 1 },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Graduate Visa', category: 'work', price: 0, processing: 14, validity: 730, entries: 'Multiple', reqs: ['UK degree completion', 'Valid Student visa history', 'Passport'], desc: 'UK Graduate route after studies — work or look for work without sponsorship for 2–3 years.', popular: 1 },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Standard Visitor Visa', category: 'tourist', price: 0, processing: 15, validity: 1825, entries: 'Multiple', reqs: ['Bank statements', 'Employment proof', 'Travel itinerary'], desc: 'UK visitor visa for tourism, family visits, and short business trips.', popular: 0 },
-
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', type: 'Highly Skilled Migrant', category: 'work', price: 0, processing: 30, validity: 1825, entries: 'Multiple', reqs: ['Recognized sponsor job offer', 'Salary criterion', 'Passport', 'Degree'], desc: 'English-friendly tech hub with progressive work-life standards. Highly Skilled Migrant permit for IT and engineering.', popular: 1 },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪', type: 'Critical Skills Employment Permit', category: 'work', price: 0, processing: 45, validity: 730, entries: 'Multiple', reqs: ['Job offer on Critical Skills list', 'Degree', 'Passport', 'Salary threshold'], desc: 'Ireland ranks high for English-speaking tech roles and EU access via Critical Skills permit.', popular: 1 },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹', type: 'D3 Highly Qualified Worker', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Qualified job contract', 'Degree', 'Proof of means', 'Passport'], desc: 'Portugal offers progressive residency options and growing tech opportunities for qualified workers.', popular: 1 },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', type: 'Work Permit', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Collective agreement / salary', 'Passport', 'Insurance'], desc: 'Sweden ranks high for work-life balance and English-friendly tech and engineering careers.', popular: 1 },
-
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', type: 'Skilled Independent (189/190)', category: 'work', price: 0, processing: 180, validity: 1825, entries: 'Permanent', reqs: ['Skills assessment', 'Points test', 'English (IELTS)', 'Age under 45', 'EOI'], desc: 'Australia points and salary/skills systems for PR. Popular alternative global option for Indian professionals.', popular: 1 },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', type: 'Visitor Visa (600)', category: 'tourist', price: 0, processing: 20, validity: 365, entries: 'Single/Multiple', reqs: ['Bank statements', 'Employment proof', 'Itinerary'], desc: 'Australian visitor visa for tourism and family visits.', popular: 0 },
-
-  { code: 'US', name: 'United States', flag: '🇺🇸', type: 'H-1B Specialty Occupation', category: 'work', price: 0, processing: 90, validity: 1095, entries: 'Multiple', reqs: ['US employer petition', 'Bachelor degree+', 'LCA', 'Passport'], desc: 'US tech and H-1B track remains a massive favorite for Indian IT and specialty occupations.', popular: 1 },
-  { code: 'US', name: 'United States', flag: '🇺🇸', type: 'Tourist Visa (B1/B2)', category: 'tourist', price: 0, processing: 14, validity: 3650, entries: 'Multiple', reqs: ['DS-160', 'Interview', 'Bank statements', 'Ties to home country'], desc: 'US B1/B2 for tourism and short business visits. Valid up to 10 years.', popular: 1 },
-
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', type: 'Employment Visa', category: 'work', price: 0, processing: 14, validity: 730, entries: 'Multiple', reqs: ['UAE job offer', 'Attested documents', 'Medical fitness', 'Passport'], desc: 'UAE remains a favorite for tax-free earnings, Dubai/Abu Dhabi careers, and fast employment visas.', popular: 1 },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', type: 'Tourist Visa', category: 'tourist', price: 0, processing: 3, validity: 60, entries: 'Single/Multiple', reqs: ['Passport 6+ months', 'Photo', 'Hotel / ticket'], desc: 'UAE tourist visa for Dubai and other emirates. Extendable options available.', popular: 1 },
-];
-
 function migrateIfNeeded(db) {
   let version = 0;
   try {
@@ -117,6 +89,7 @@ function migrateIfNeeded(db) {
   db.exec(`
     DROP TABLE IF EXISTS kyc_verifications;
     DROP TABLE IF EXISTS orders;
+    DROP TABLE IF EXISTS jobs;
     DROP TABLE IF EXISTS admin_sessions;
     DROP TABLE IF EXISTS visas;
     DROP TABLE IF EXISTS admin_users;
@@ -142,6 +115,21 @@ CREATE TABLE IF NOT EXISTS visas (
   UNIQUE(country_code, visa_type, category)
 );
 
+CREATE TABLE IF NOT EXISTS jobs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  company TEXT NOT NULL,
+  country_code TEXT NOT NULL,
+  country_name TEXT NOT NULL,
+  city TEXT NOT NULL,
+  category TEXT NOT NULL,
+  salary_range TEXT,
+  visa_support INTEGER DEFAULT 1,
+  description TEXT NOT NULL,
+  active INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   order_number TEXT NOT NULL UNIQUE,
@@ -155,6 +143,10 @@ CREATE TABLE IF NOT EXISTS orders (
   age INTEGER,
   date_of_birth TEXT,
   residence TEXT,
+  current_city TEXT,
+  preferred_city TEXT,
+  job_id INTEGER,
+  target_job TEXT,
   education TEXT,
   work_experience TEXT,
   language TEXT,
@@ -218,6 +210,76 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
 
+const VISA_DATA = [
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Express Entry (PR)', category: 'work', price: 0, processing: 180, validity: 1825, entries: 'Permanent', reqs: ['Valid passport', 'IELTS / CELPIP', 'ECA', 'Work experience', 'Proof of funds'], desc: 'Top PR pathway for skilled workers via Express Entry and PNP.', popular: 1 },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Visitor Visa (TRV)', category: 'tourist', price: 0, processing: 21, validity: 3650, entries: 'Multiple', reqs: ['Passport', 'Proof of funds', 'Ties to home'], desc: 'Canadian visitor visa for tourism and family visits.', popular: 1 },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', type: 'Study Permit', category: 'student', price: 0, processing: 30, validity: 3650, entries: 'Multiple', reqs: ['LOA', 'Proof of funds', 'Language test'], desc: 'Study in Canada with work rights during studies.', popular: 0 },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'EU Blue Card', category: 'work', price: 0, processing: 60, validity: 1460, entries: 'Multiple', reqs: ['Job offer', 'Degree', 'Salary threshold'], desc: 'EU Blue Card for engineers and IT professionals.', popular: 1 },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'Skilled Worker Visa', category: 'work', price: 0, processing: 60, validity: 1460, entries: 'Multiple', reqs: ['Job contract', 'Qualification recognition'], desc: 'Germany skilled worker pathway outside Blue Card thresholds.', popular: 1 },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪', type: 'Schengen Visa (C)', category: 'tourist', price: 0, processing: 10, validity: 180, entries: 'Single/Multiple', reqs: ['Travel insurance', 'Bank statements'], desc: 'Short-stay Schengen for Germany and 29 countries.', popular: 0 },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Skilled Worker Visa', category: 'work', price: 0, processing: 21, validity: 1825, entries: 'Multiple', reqs: ['CoS', 'English', 'Salary threshold'], desc: 'UK sponsored work visa with large Indian community.', popular: 1 },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Graduate Visa', category: 'work', price: 0, processing: 14, validity: 730, entries: 'Multiple', reqs: ['UK degree', 'Student visa history'], desc: 'Post-study work without sponsorship for 2–3 years.', popular: 1 },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', type: 'Standard Visitor Visa', category: 'tourist', price: 0, processing: 15, validity: 1825, entries: 'Multiple', reqs: ['Bank statements', 'Itinerary'], desc: 'UK visitor visa for tourism and short business.', popular: 0 },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', type: 'Highly Skilled Migrant', category: 'work', price: 0, processing: 30, validity: 1825, entries: 'Multiple', reqs: ['Recognized sponsor', 'Salary criterion'], desc: 'English-friendly tech hub work permit.', popular: 1 },
+  { code: 'IE', name: 'Ireland', flag: '🇮🇪', type: 'Critical Skills Employment Permit', category: 'work', price: 0, processing: 45, validity: 730, entries: 'Multiple', reqs: ['Critical Skills job', 'Degree'], desc: 'Ireland tech and EU-access pathway.', popular: 1 },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹', type: 'D3 Highly Qualified Worker', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Qualified job', 'Degree'], desc: 'Portugal residency track for qualified workers.', popular: 1 },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪', type: 'Work Permit', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Collective agreement'], desc: 'Sweden work permit for tech and engineering.', popular: 1 },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺', type: 'Skilled Independent (189/190)', category: 'work', price: 0, processing: 180, validity: 1825, entries: 'Permanent', reqs: ['Skills assessment', 'Points test', 'English'], desc: 'Australia points-based PR for skilled migrants.', popular: 1 },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺', type: 'Visitor Visa (600)', category: 'tourist', price: 0, processing: 20, validity: 365, entries: 'Single/Multiple', reqs: ['Funds', 'Itinerary'], desc: 'Australian visitor visa.', popular: 0 },
+  { code: 'US', name: 'United States', flag: '🇺🇸', type: 'H-1B Specialty Occupation', category: 'work', price: 0, processing: 90, validity: 1095, entries: 'Multiple', reqs: ['US employer petition', 'Degree', 'LCA'], desc: 'US specialty occupation visa for IT and skilled roles.', popular: 1 },
+  { code: 'US', name: 'United States', flag: '🇺🇸', type: 'Tourist Visa (B1/B2)', category: 'tourist', price: 0, processing: 14, validity: 3650, entries: 'Multiple', reqs: ['DS-160', 'Interview'], desc: 'US B1/B2 tourist and business visitor.', popular: 1 },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', type: 'Employment Visa', category: 'work', price: 0, processing: 14, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Medical', 'Attested docs'], desc: 'UAE employment visa — tax-free Gulf careers.', popular: 1 },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', type: 'Tourist Visa', category: 'tourist', price: 0, processing: 3, validity: 60, entries: 'Single/Multiple', reqs: ['Passport', 'Hotel'], desc: 'UAE tourist visa for Dubai and emirates.', popular: 0 },
+  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', type: 'Skilled Migrant Category', category: 'work', price: 0, processing: 120, validity: 1825, entries: 'Permanent', reqs: ['Points', 'Job / skills', 'English'], desc: 'NZ skilled migrant pathway for PR.', popular: 1 },
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬', type: 'Employment Pass', category: 'work', price: 0, processing: 21, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Salary threshold', 'Degree'], desc: 'Singapore EP for professionals in Asia hub.', popular: 1 },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵', type: 'Engineer / Specialist in Humanities', category: 'work', price: 0, processing: 45, validity: 1095, entries: 'Multiple', reqs: ['Job offer', 'Degree', 'COE'], desc: 'Japan work visa for engineers and specialists.', popular: 1 },
+  { code: 'FR', name: 'France', flag: '🇫🇷', type: 'Talent Passport / Salarié', category: 'work', price: 0, processing: 60, validity: 1460, entries: 'Multiple', reqs: ['Job contract', 'Degree'], desc: 'France skilled worker and talent routes.', popular: 1 },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱', type: 'National Work Visa (D)', category: 'work', price: 0, processing: 30, validity: 365, entries: 'Multiple', reqs: ['Work permit / declaration', 'Job offer'], desc: 'Poland work visa — EU entry for many roles.', popular: 1 },
+  { code: 'MT', name: 'Malta', flag: '🇲🇹', type: 'Single Permit (Work)', category: 'work', price: 0, processing: 45, validity: 365, entries: 'Multiple', reqs: ['Job offer', 'Qualifications'], desc: 'Malta English-speaking EU work permit.', popular: 0 },
+  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', type: 'Work Visa (Iqama track)', category: 'work', price: 0, processing: 21, validity: 730, entries: 'Multiple', reqs: ['Sponsor', 'Medical', 'Attested docs'], desc: 'Saudi work visa for Vision 2030 job demand.', popular: 1 },
+  { code: 'QA', name: 'Qatar', flag: '🇶🇦', type: 'Work Residence Permit', category: 'work', price: 0, processing: 21, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Medical'], desc: 'Qatar employment for skilled and hospitality roles.', popular: 0 },
+  { code: 'MY', name: 'Malaysia', flag: '🇲🇾', type: 'Employment Pass', category: 'work', price: 0, processing: 30, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Qualifications'], desc: 'Malaysia EP for professionals in KL and tech parks.', popular: 0 },
+  { code: 'KR', name: 'South Korea', flag: '🇰🇷', type: 'E-7 Specialty Occupation', category: 'work', price: 0, processing: 45, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Degree / experience'], desc: 'Korea E-7 for skilled specialty workers.', popular: 0 },
+  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿', type: 'Employee Card', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Qualifications'], desc: 'Czech Employee Card for EU work and stay.', popular: 0 },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹', type: 'Work Visa (Decreto Flussi / Blue Card)', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Quota / Blue Card job', 'Contract'], desc: 'Italy work routes for skilled and seasonal demand.', popular: 0 },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸', type: 'Highly Qualified / Work Visa', category: 'work', price: 0, processing: 60, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Degree'], desc: 'Spain highly qualified and work residence.', popular: 1 },
+  { code: 'FI', name: 'Finland', flag: '🇫🇮', type: 'Specialist Residence Permit', category: 'work', price: 0, processing: 45, validity: 730, entries: 'Multiple', reqs: ['Job offer', 'Salary threshold'], desc: 'Finland specialist permit for tech talent.', popular: 0 },
+  { code: 'DK', name: 'Denmark', flag: '🇩🇰', type: 'Pay Limit / Positive List', category: 'work', price: 0, processing: 30, validity: 1460, entries: 'Multiple', reqs: ['Job offer', 'Salary / Positive List'], desc: 'Denmark work schemes for skilled professionals.', popular: 0 },
+];
+
+const JOB_DATA = [
+  { title: 'Software Engineer', company: 'NorthPeak Tech', code: 'CA', name: 'Canada', city: 'Toronto', category: 'IT', salary: 'CAD 85k–120k', desc: 'Full-stack role with PR-friendly employer support.' },
+  { title: 'Cloud / DevOps Engineer', company: 'Maple Cloud', code: 'CA', name: 'Canada', city: 'Vancouver', category: 'IT', salary: 'CAD 90k–130k', desc: 'AWS/Azure DevOps with Express Entry friendly profile.' },
+  { title: 'Registered Nurse', company: 'CareBridge Health', code: 'CA', name: 'Canada', city: 'Calgary', category: 'Healthcare', salary: 'CAD 70k–95k', desc: 'Hospital nursing roles with licensing guidance.' },
+  { title: 'Java Backend Developer', company: 'Berlin SoftLabs', code: 'DE', name: 'Germany', city: 'Berlin', category: 'IT', salary: '€55k–75k', desc: 'EU Blue Card eligible backend engineering.' },
+  { title: 'Mechanical Engineer', company: 'AutoTechnik GmbH', code: 'DE', name: 'Germany', city: 'Stuttgart', category: 'Engineering', salary: '€50k–70k', desc: 'Automotive OEM supplier — skilled worker visa.' },
+  { title: 'Data Engineer', company: 'Rhine Analytics', code: 'DE', name: 'Germany', city: 'Munich', category: 'IT', salary: '€60k–80k', desc: 'Python/Spark pipelines, Blue Card salary band.' },
+  { title: 'Full Stack Developer', company: 'Thames Digital', code: 'GB', name: 'United Kingdom', city: 'London', category: 'IT', salary: '£45k–70k', desc: 'Skilled Worker visa sponsorship available.' },
+  { title: 'Product Manager', company: 'Northern Apps', code: 'GB', name: 'United Kingdom', city: 'Manchester', category: 'Product', salary: '£50k–75k', desc: 'SaaS product role with CoS sponsorship.' },
+  { title: 'Healthcare Assistant', company: 'CareUK Partners', code: 'GB', name: 'United Kingdom', city: 'Birmingham', category: 'Healthcare', salary: '£24k–32k', desc: 'Care sector demand with visa support pathways.' },
+  { title: 'Frontend Engineer', company: 'Dam Digital', code: 'NL', name: 'Netherlands', city: 'Amsterdam', category: 'IT', salary: '€50k–70k', desc: 'Highly Skilled Migrant eligible React role.' },
+  { title: 'QA Automation Engineer', company: 'Eindhoven Labs', code: 'NL', name: 'Netherlands', city: 'Eindhoven', category: 'IT', salary: '€45k–62k', desc: 'Embedded/test automation with HSM sponsor.' },
+  { title: 'Software Engineer', company: 'Liffey Tech', code: 'IE', name: 'Ireland', city: 'Dublin', category: 'IT', salary: '€45k–70k', desc: 'Critical Skills list occupation.' },
+  { title: 'Account Manager', company: 'Atlantic Sales', code: 'IE', name: 'Ireland', city: 'Cork', category: 'Sales', salary: '€35k–50k', desc: 'B2B SaaS sales with EU base.' },
+  { title: 'Full Stack Developer', company: 'Lisboa Code', code: 'PT', name: 'Portugal', city: 'Lisbon', category: 'IT', salary: '€30k–48k', desc: 'D3 qualified worker track.' },
+  { title: 'Data Scientist', company: 'Nordic Insight', code: 'SE', name: 'Sweden', city: 'Stockholm', category: 'IT', salary: 'SEK 450k–650k', desc: 'Work permit for AI/ML talent.' },
+  { title: 'Civil Engineer', company: 'Harbour Build', code: 'AU', name: 'Australia', city: 'Sydney', category: 'Engineering', salary: 'AUD 90k–130k', desc: 'Points-friendly engineering role.' },
+  { title: 'Software Engineer', company: 'Outback Cloud', code: 'AU', name: 'Australia', city: 'Melbourne', category: 'IT', salary: 'AUD 95k–140k', desc: 'Skilled migration aligned tech role.' },
+  { title: 'Software Engineer', company: 'Bay Area Systems', code: 'US', name: 'United States', city: 'San Francisco', category: 'IT', salary: 'USD 120k–170k', desc: 'H-1B specialty occupation track.' },
+  { title: 'Data Analyst', company: 'Austin Metrics', code: 'US', name: 'United States', city: 'Austin', category: 'IT', salary: 'USD 85k–115k', desc: 'Analytics role for specialty visa profiles.' },
+  { title: 'Software Engineer', company: 'Dubai FinTech', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'IT', salary: 'AED 15k–25k/mo', desc: 'Tax-free tech role with employment visa.' },
+  { title: 'Hospitality Supervisor', company: 'Gulf Hotels Group', code: 'AE', name: 'United Arab Emirates', city: 'Abu Dhabi', category: 'Hospitality', salary: 'AED 8k–14k/mo', desc: 'Hotel operations with sponsor visa.' },
+  { title: 'Software Developer', company: 'Kiwi Soft', code: 'NZ', name: 'New Zealand', city: 'Auckland', category: 'IT', salary: 'NZD 80k–110k', desc: 'Skilled Migrant aligned developer role.' },
+  { title: 'Cloud Engineer', company: 'Lion City Cloud', code: 'SG', name: 'Singapore', city: 'Singapore', category: 'IT', salary: 'SGD 6k–10k/mo', desc: 'Employment Pass for cloud talent.' },
+  { title: 'Embedded Software Engineer', company: 'Tokyo Devices', code: 'JP', name: 'Japan', city: 'Tokyo', category: 'IT', salary: 'JPY 5.5M–8M', desc: 'Engineer visa with COE support.' },
+  { title: 'Backend Developer', company: 'Paris SaaS', code: 'FR', name: 'France', city: 'Paris', category: 'IT', salary: '€42k–60k', desc: 'Talent Passport / salarié eligible.' },
+  { title: 'Warehouse Operative', company: 'Warsaw Logistics', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Logistics', salary: 'PLN 5k–7k/mo', desc: 'Work visa with employer declaration.' },
+  { title: 'iOS Developer', company: 'Madrid Mobile', code: 'ES', name: 'Spain', city: 'Madrid', category: 'IT', salary: '€35k–55k', desc: 'Highly qualified worker route.' },
+  { title: 'Site Engineer', company: 'Riyadh Projects', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Engineering', salary: 'SAR 10k–18k/mo', desc: 'Construction demand with work visa.' },
+  { title: 'Chef de Partie', company: 'Doha Dining', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Hospitality', salary: 'QAR 4k–7k/mo', desc: 'Hospitality employment residence.' },
+  { title: 'Cybersecurity Analyst', company: 'KL Secure', code: 'MY', name: 'Malaysia', city: 'Kuala Lumpur', category: 'IT', salary: 'MYR 7k–12k/mo', desc: 'Employment Pass for security talent.' },
+];
+
 function seed(db) {
   const insertVisa = db.prepare(`
     INSERT OR IGNORE INTO visas (country_code, country_name, flag_emoji, visa_type, category, price, processing_days, validity_days, entries, requirements, description, popular)
@@ -228,6 +290,17 @@ function seed(db) {
     insertVisa.run(v.code, v.name, v.flag, v.type, v.category, v.price, v.processing, v.validity, v.entries, JSON.stringify(v.reqs), v.desc, v.popular);
   }
 
+  const jobCount = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
+  if (!jobCount) {
+    const insertJob = db.prepare(`
+      INSERT INTO jobs (title, company, country_code, country_name, city, category, salary_range, visa_support, description, active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1)
+    `);
+    for (const j of JOB_DATA) {
+      insertJob.run(j.title, j.company, j.code, j.name, j.city, j.category, j.salary, j.desc);
+    }
+  }
+
   const adminUser = process.env.ADMIN_USER || 'admin';
   const adminPass = process.env.ADMIN_PASS || 'NexoraGo2026!';
   db.prepare(`
@@ -235,9 +308,11 @@ function seed(db) {
   `).run(adminUser, hashPassword(adminPass));
 
   const count = db.prepare('SELECT COUNT(*) as c FROM visas').get().c;
-  console.log(`[DB] Seeded ${count} visa products (sql.js)`);
+  const jobs = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
+  console.log(`[DB] Seeded ${count} visa products, ${jobs} jobs (sql.js)`);
   console.log(`[DB] Admin login: ${adminUser} / (set ADMIN_PASS to change)`);
 }
+
 
 let _db = null;
 let _initPromise = null;

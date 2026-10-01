@@ -1435,13 +1435,83 @@ a:hover { text-decoration: none; }
   background: rgba(255, 255, 255, 0.02);
 }
 
-.admin-toolbar {
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.job-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.job-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.job-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.job-card-top h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.job-tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  white-space: nowrap;
+}
+
+.job-company { color: var(--text-secondary); margin: 0; font-size: 0.9rem; }
+.job-loc { color: var(--text-muted); margin: 0; font-size: 0.85rem; }
+.job-salary { color: #34d399; margin: 0; font-weight: 600; font-size: 0.9rem; }
+.job-desc { color: var(--text-secondary); margin: 0.35rem 0 0.5rem; font-size: 0.88rem; line-height: 1.45; flex: 1; }
+
+.job-card-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.admin-job-form {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-job-form .form-row { margin-bottom: 0.75rem; }
+.admin-job-form input,
+.admin-job-form select {
+  width: 100%;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
 }
 
 .admin-actions {

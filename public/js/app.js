@@ -13,8 +13,12 @@ function showView(viewName) {
   const navLinks = document.getElementById('navLinks');
   if (navLinks) navLinks.classList.remove('open');
 
-  if (viewName === 'home') loadPopularVisas();
+  if (viewName === 'home') {
+    loadPopularVisas();
+    loadHomeJobs();
+  }
   if (viewName === 'visas') loadAllVisas();
+  if (viewName === 'jobs') loadAllJobs();
   if (viewName === 'admin') {
     if (adminToken) {
       document.getElementById('admin-login').style.display = 'none';
@@ -162,6 +166,186 @@ async function startFromCard(id) {
   } catch (e) { /* handled */ }
 }
 
+let allJobsCache = [];
+let pendingJobId = null;
+
+function jobCardHTML(j) {
+  return `
+    <div class="job-card">
+      <div class="job-card-top">
+        <h3>${escapeHtml(j.title)}</h3>
+        <span class="job-tag">${escapeHtml(j.category)}</span>
+      </div>
+      <p class="job-company">${escapeHtml(j.company)}</p>
+      <p class="job-loc">${escapeHtml(j.country_name)} · ${escapeHtml(j.city)}</p>
+      <p class="job-salary">${escapeHtml(j.salary_range || 'Competitive')}</p>
+      <p class="job-desc">${escapeHtml(j.description)}</p>
+      <div class="job-card-actions">
+        <span class="visa-tag">${j.visa_support ? 'Visa support' : 'Check visa'}</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="applyForJob(${Number(j.id)})">Apply →</button>
+      </div>
+    </div>
+  `;
+}
+
+async function loadHomeJobs() {
+  try {
+    const jobs = await api('/api/jobs');
+    allJobsCache = jobs;
+    const el = document.getElementById('home-jobs');
+    if (el) el.innerHTML = jobs.slice(0, 6).map(jobCardHTML).join('');
+  } catch (e) { /* handled */ }
+}
+
+async function loadAllJobs() {
+  try {
+    const jobs = await api('/api/jobs');
+    allJobsCache = jobs;
+    const countries = [...new Map(jobs.map(j => [j.country_code, j])).values()]
+      .sort((a, b) => a.country_name.localeCompare(b.country_name));
+    const sel = document.getElementById('job-filter-country');
+    if (sel) {
+      sel.innerHTML = '<option value="">All Countries</option>' +
+        countries.map(c => `<option value="${escapeHtml(c.country_code)}">${escapeHtml(c.country_name)}</option>`).join('');
+    }
+    renderJobs(jobs);
+  } catch (e) { /* handled */ }
+}
+
+function renderJobs(jobs) {
+  const el = document.getElementById('all-jobs');
+  if (!el) return;
+  el.innerHTML = jobs.length
+    ? jobs.map(jobCardHTML).join('')
+    : '<p style="text-align:center;color:var(--text-muted);padding:2rem;">No jobs found.</p>';
+}
+
+function filterJobs() {
+  const q = (document.getElementById('job-search')?.value || '').toLowerCase();
+  const country = document.getElementById('job-filter-country')?.value || '';
+  const category = document.getElementById('job-filter-category')?.value || '';
+  const filtered = allJobsCache.filter(j => {
+    if (country && j.country_code !== country) return false;
+    if (category && j.category !== category) return false;
+    if (q) {
+      const hay = `${j.title} ${j.company} ${j.city} ${j.country_name}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderJobs(filtered);
+}
+
+async function applyForJob(jobId) {
+  try {
+    const job = await api(`/api/jobs/${jobId}`);
+    pendingJobId = job.id;
+    // pick a matching work visa for that country
+    const visas = await api(`/api/visas?country=${encodeURIComponent(job.country_code)}&category=work`);
+    const visa = visas[0] || (await api(`/api/visas?country=${encodeURIComponent(job.country_code)}`))[0];
+    if (!visa) {
+      showToast('No visa pathway found for this country', 'warning');
+      return;
+    }
+    currentVisa = visa;
+    startApplication(visa.id, job);
+  } catch (e) { /* handled */ }
+}
+
+async function prepareApplyForm(selectedJob = null) {
+  try {
+    const meta = await api(`/api/cities?country=${encodeURIComponent(currentVisa?.country_code || '')}`);
+    const homeSel = document.getElementById('current-city');
+    const prefSel = document.getElementById('preferred-city');
+    const jobSel = document.getElementById('apply-job-id');
+    const list = document.getElementById('job-title-list');
+
+    if (homeSel) {
+      homeSel.innerHTML = '<option value="">Select city</option>' +
+        (meta.home_cities || []).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+    if (prefSel) {
+      const cities = meta.cities || [];
+      prefSel.innerHTML = '<option value="">Select city</option>' +
+        cities.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+        '<option value="Other">Other</option>';
+    }
+    if (list) {
+      list.innerHTML = (meta.job_titles || []).map(t => `<option value="${escapeHtml(t)}"></option>`).join('');
+    }
+
+    const countryJobs = await api(`/api/jobs?country=${encodeURIComponent(currentVisa?.country_code || '')}`);
+    if (jobSel) {
+      jobSel.innerHTML = '<option value="">Custom / not listed</option>' +
+        countryJobs.map(j => `<option value="${j.id}">${escapeHtml(j.title)} — ${escapeHtml(j.city)}</option>`).join('');
+    }
+
+    if (selectedJob) {
+      if (jobSel) jobSel.value = String(selectedJob.id);
+      const occ = document.getElementById('occupation-input');
+      if (occ) occ.value = selectedJob.title;
+      const tj = document.getElementById('target-job-input');
+      if (tj) tj.value = selectedJob.title;
+      if (prefSel && selectedJob.city) prefSel.value = selectedJob.city;
+      const purpose = document.querySelector('#apply-form [name="purpose"]');
+      if (purpose) purpose.value = 'work';
+    } else if (pendingJobId && jobSel) {
+      jobSel.value = String(pendingJobId);
+      onApplyJobChange();
+    }
+  } catch (e) { /* handled */ }
+}
+
+function onApplyJobChange() {
+  const jobSel = document.getElementById('apply-job-id');
+  const id = jobSel?.value;
+  if (!id) return;
+  const job = allJobsCache.find(j => String(j.id) === String(id));
+  if (!job) return;
+  const occ = document.getElementById('occupation-input');
+  if (occ) occ.value = job.title;
+  const tj = document.getElementById('target-job-input');
+  if (tj) tj.value = job.title;
+  const prefSel = document.getElementById('preferred-city');
+  if (prefSel && [...prefSel.options].some(o => o.value === job.city)) prefSel.value = job.city;
+}
+
+function startApplication(visaId, selectedJob = null) {
+  if (!currentVisa || Number(currentVisa.id) !== Number(visaId)) {
+    showToast('Please select a visa first', 'warning');
+    return;
+  }
+
+  const form = document.getElementById('apply-form');
+  if (form) form.reset();
+
+  const travelInput = document.querySelector('#apply-form input[name="travel_date"]');
+  if (travelInput) {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    travelInput.min = d.toISOString().slice(0, 10);
+  }
+
+  const setHidden = (name, val) => {
+    const el = document.querySelector(`#apply-form [name="${name}"]`);
+    if (el) el.value = val;
+  };
+  setHidden('residence', 'India');
+  setHidden('language', 'fluent');
+  setHidden('trip_funds', '5k_10k');
+  setHidden('notes', '');
+  const emp = document.querySelector('#apply-form [name="employment_status"]');
+  if (emp) emp.value = 'employed';
+
+  document.getElementById('apply-visa-label').textContent =
+    `${currentVisa.flag_emoji} ${currentVisa.country_name} — ${currentVisa.visa_type}`;
+
+  updateSummary();
+  showView('apply');
+  prepareApplyForm(selectedJob);
+  pendingJobId = null;
+}
+
 async function showVisaDetail(id) {
   try {
     const v = await api(`/api/visas/${id}`);
@@ -207,40 +391,6 @@ async function showVisaDetail(id) {
     `;
     showView('detail');
   } catch (e) { /* handled */ }
-}
-
-function startApplication(visaId) {
-  if (!currentVisa || Number(currentVisa.id) !== Number(visaId)) {
-    showToast('Please select a visa first', 'warning');
-    return;
-  }
-
-  const form = document.getElementById('apply-form');
-  if (form) form.reset();
-
-  const travelInput = document.querySelector('#apply-form input[name="travel_date"]');
-  if (travelInput) {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    travelInput.min = d.toISOString().slice(0, 10);
-  }
-
-  // restore hidden defaults after reset
-  const setHidden = (name, val) => {
-    const el = document.querySelector(`#apply-form [name="${name}"]`);
-    if (el) el.value = val;
-  };
-  setHidden('residence', 'India');
-  setHidden('employment_status', 'employed');
-  setHidden('language', 'fluent');
-  setHidden('trip_funds', '5k_10k');
-  setHidden('notes', '');
-
-  document.getElementById('apply-visa-label').textContent =
-    `${currentVisa.flag_emoji} ${currentVisa.country_name} — ${currentVisa.visa_type}`;
-
-  updateSummary();
-  showView('apply');
 }
 
 function updateSummary() {
@@ -337,6 +487,8 @@ async function submitApplication(e) {
   data.employment_status = data.employment_status || 'employed';
   data.language = data.language || 'fluent';
   data.trip_funds = data.trip_funds || '5k_10k';
+  data.target_job = data.target_job || data.occupation;
+  if (!data.job_id) delete data.job_id;
 
   const btn = form.querySelector('button[type="submit"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
@@ -668,8 +820,8 @@ async function loadAdminDashboard() {
     document.getElementById('admin-stats').innerHTML = `
       <div class="admin-stat-card"><div class="number">${stats.totalOrders}</div><div class="label">Applications</div></div>
       <div class="admin-stat-card"><div class="number">${stats.pendingOrders}</div><div class="label">Pending</div></div>
-      <div class="admin-stat-card"><div class="number">${stats.processingOrders}</div><div class="label">Reviewing</div></div>
-      <div class="admin-stat-card"><div class="number">${stats.completedOrders}</div><div class="label">Done</div></div>
+      <div class="admin-stat-card"><div class="number">${stats.totalJobs || 0}</div><div class="label">Jobs</div></div>
+      <div class="admin-stat-card"><div class="number">${stats.totalVisas || 0}</div><div class="label">Visas</div></div>
     `;
     loadAdminOrders();
   } catch (e) {
@@ -682,8 +834,11 @@ function showAdminTab(tab, btn) {
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.getElementById('admin-orders').style.display = tab === 'orders' ? 'block' : 'none';
+  const jobsPanel = document.getElementById('admin-jobs');
+  if (jobsPanel) jobsPanel.style.display = tab === 'jobs' ? 'block' : 'none';
   document.getElementById('admin-visas').style.display = tab === 'visas' ? 'block' : 'none';
   if (tab === 'orders') loadAdminOrders();
+  if (tab === 'jobs') loadAdminJobs();
   if (tab === 'visas') loadAdminVisas();
 }
 
@@ -830,12 +985,16 @@ async function openAdminOrder(orderId) {
         ${fieldRow('ID type', o.id_type)}
         ${fieldRow('ID number', o.id_number)}
         ${fieldRow('Residence', o.residence)}
+        ${fieldRow('Current city', o.current_city)}
+        ${fieldRow('Preferred city', o.preferred_city)}
       </div>
 
       <h4 class="admin-section-title">Stay & work / finance</h4>
       <div class="admin-field-grid">
         ${fieldRow('Purpose', o.purpose)}
         ${fieldRow('Occupation', o.occupation)}
+        ${fieldRow('Target job', o.target_job)}
+        ${fieldRow('Job listing ID', o.job_id)}
         ${fieldRow('Employment', o.employment_status)}
         ${fieldRow('Work experience', o.work_experience)}
         ${fieldRow('Education', o.education)}
@@ -944,6 +1103,100 @@ function getRefFromUrl() {
     ref = hp.get('ref') || hp.get('track') || (hash.startsWith('VSA-') ? hash : null);
   }
   return ref ? decodeURIComponent(ref).trim() : null;
+}
+
+async function loadAdminJobs() {
+  try {
+    const jobs = await api('/api/admin/jobs');
+    const panel = document.getElementById('admin-jobs');
+    if (!panel) return;
+    panel.innerHTML = `
+      <div class="admin-toolbar">
+        <span>${jobs.length} jobs</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="toggleJobForm()">+ Add job</button>
+      </div>
+      <div id="admin-job-form" class="admin-job-form" style="display:none;">
+        <div class="form-row">
+          <div class="form-group"><label>Title *</label><input id="nj-title" required></div>
+          <div class="form-group"><label>Company *</label><input id="nj-company" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Country code *</label><input id="nj-code" placeholder="CA" required></div>
+          <div class="form-group"><label>Country name *</label><input id="nj-cname" placeholder="Canada" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>City *</label><input id="nj-city" required></div>
+          <div class="form-group"><label>Category *</label>
+            <select id="nj-cat"><option>IT</option><option>Engineering</option><option>Healthcare</option><option>Hospitality</option><option>Sales</option><option>Logistics</option><option>Product</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Salary</label><input id="nj-salary" placeholder="CAD 80k–110k"></div>
+          <div class="form-group"><label>Description *</label><input id="nj-desc" required></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="createAdminJob()">Save job</button>
+      </div>
+      <table class="admin-table">
+        <thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Active</th><th></th></tr></thead>
+        <tbody>
+          ${jobs.map(j => `
+            <tr>
+              <td>${escapeHtml(j.title)}</td>
+              <td>${escapeHtml(j.company)}</td>
+              <td>${escapeHtml(j.country_name)} · ${escapeHtml(j.city)}</td>
+              <td>${escapeHtml(j.category)}</td>
+              <td>${j.active ? 'Yes' : 'No'}</td>
+              <td class="admin-actions">
+                <button type="button" class="btn btn-sm btn-outline" onclick="toggleAdminJob(${Number(j.id)}, ${j.active ? 0 : 1})">${j.active ? 'Disable' : 'Enable'}</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="deleteAdminJob(${Number(j.id)})">Delete</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) { /* handled */ }
+}
+
+function toggleJobForm() {
+  const el = document.getElementById('admin-job-form');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createAdminJob() {
+  try {
+    const body = {
+      title: document.getElementById('nj-title')?.value,
+      company: document.getElementById('nj-company')?.value,
+      country_code: document.getElementById('nj-code')?.value,
+      country_name: document.getElementById('nj-cname')?.value,
+      city: document.getElementById('nj-city')?.value,
+      category: document.getElementById('nj-cat')?.value,
+      salary_range: document.getElementById('nj-salary')?.value,
+      description: document.getElementById('nj-desc')?.value,
+    };
+    await api('/api/admin/jobs', { method: 'POST', body: JSON.stringify(body) });
+    showToast('Job added', 'success');
+    loadAdminJobs();
+    loadAdminDashboard();
+  } catch (e) { /* handled */ }
+}
+
+async function toggleAdminJob(id, active) {
+  try {
+    await api(`/api/admin/jobs/${id}`, { method: 'PATCH', body: JSON.stringify({ active: !!active }) });
+    loadAdminJobs();
+  } catch (e) { /* handled */ }
+}
+
+async function deleteAdminJob(id) {
+  if (!confirm('Delete this job listing?')) return;
+  try {
+    await api(`/api/admin/jobs/${id}`, { method: 'DELETE' });
+    showToast('Job deleted', 'success');
+    loadAdminJobs();
+    loadAdminDashboard();
+  } catch (e) { /* handled */ }
 }
 
 async function loadAdminVisas() {
