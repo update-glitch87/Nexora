@@ -46,31 +46,41 @@ ADMIN_PASS=your-secure-password
 
 KYC link format: `/track?ref=VSA-...`
 
-## Deploy (free)
+## Deploy on Netlify (free)
 
-This is a **Node + Express + SQLite** app (not a static site).
+This app is set up for **Netlify**: static `public/` + serverless Express API.
 
-**Netlify** is for static / serverless frontends — it is **not** a good fit for this full server + SQLite + file uploads stack.
+1. Push to GitHub: `https://github.com/update-glitch87/Nexora`
+2. Go to [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import from Git**
+3. Select **Nexora**
+4. Build settings (auto from `netlify.toml`):
+   - **Build command:** `npm install`
+   - **Publish directory:** `public`
+   - **Functions directory:** `netlify/functions`
+   - **Node version:** `22`
+5. Site settings → Environment variables (optional):
+   - `ADMIN_USER` = `admin`
+   - `ADMIN_PASS` = your password
+6. Deploy
 
-### Recommended: Render (free web service)
+After deploy, open your `*.netlify.app` URL.
 
-1. Push this repo to GitHub  
-2. [Render](https://render.com) → New → Web Service → connect repo  
-3. Settings:
-   - **Runtime:** Node  
-   - **Build:** `npm install`  
-   - **Start:** `npm start`  
-   - **Node version:** `22`  
-4. Add env vars: `ADMIN_PASS`, optional `ADMIN_USER`  
-5. Deploy  
+**Notes**
+- KYC uploads & SQLite live in `/tmp` on Netlify (ephemeral — data can reset on cold starts). Fine for demo; use a real DB later for production.
+- Local still works with `npm start` (Express on port 3000).
 
-Free-tier disk is ephemeral — SQLite data may reset on redeploy. For production, add a persistent disk or external DB later.
+### CLI deploy (optional)
 
-`render.yaml` is included for Blueprint deploy.
+```bash
+npm i -g netlify-cli
+netlify login
+netlify init
+netlify deploy --prod
+```
 
-### Railway / Fly.io
+## Deploy on Render (alternative)
 
-Same idea: Node 22 web service, start command `npm start`, set `PORT` automatically by the host.
+See `render.yaml` — use if you prefer a always-on Node web service.
 
 ## Project layout
 

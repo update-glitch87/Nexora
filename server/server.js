@@ -7,18 +7,24 @@ const multer = require('multer');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  || (IS_NETLIFY ? path.join('/tmp', 'uploads', 'kyc') : path.join(__dirname, '..', 'public', 'uploads', 'kyc'));
+
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Local/Render: serve static. Netlify serves public/ separately.
+if (!IS_NETLIFY) {
+  app.use(express.static(path.join(__dirname, '..', 'public')));
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '..', 'public', 'uploads', 'kyc');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -277,8 +283,8 @@ app.post('/api/orders/:id/kyc', upload.fields([
     return res.status(400).json({ error: 'ID document and selfie are required' });
   }
 
-  const idDocPath = `/uploads/kyc/${req.files.id_document[0].filename}`;
-  const selfiePath = `/uploads/kyc/${req.files.selfie[0].filename}`;
+  const idDocPath = `/api/files/${req.files.id_document[0].filename}`;
+  const selfiePath = `/api/files/${req.files.selfie[0].filename}`;
 
   db.prepare(`
     INSERT INTO kyc_verifications (
@@ -529,6 +535,14 @@ app.delete('/api/admin/visas/:id', requireAdmin, (req, res) => {
   res.json({ message: 'Visa deleted' });
 });
 
+// Serve uploaded KYC files (works on Netlify /tmp and local disk)
+app.get('/api/files/:name', (req, res) => {
+  const name = path.basename(req.params.name);
+  const filePath = path.join(UPLOAD_DIR, name);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
+  res.sendFile(filePath);
+});
+
 // Multer / API errors
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || err.message?.includes('Only JPG')) {
@@ -538,15 +552,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error' });
 });
 
-app.get('/track', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
+if (!IS_NETLIFY) {
+  app.get('/track', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  });
+}
 
-app.listen(PORT, HOST, () => {
-  console.log(`\n  VisaGo live at http://localhost:${PORT}`);
-  console.log(`  Bound to ${HOST}:${PORT}\n`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  const HOST = process.env.HOST || '0.0.0.0';
+  app.listen(PORT, HOST, () => {
+    console.log(`\n  VisaGo live at http://localhost:${PORT}`);
+    console.log(`  Bound to ${HOST}:${PORT}\n`);
+  });
+}

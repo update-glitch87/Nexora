@@ -3,7 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR
+  || ((process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME)
+    ? path.join('/tmp', 'visago-data')
+    : path.join(__dirname, '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
