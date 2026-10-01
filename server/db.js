@@ -10,7 +10,7 @@ const DATA_DIR = process.env.DATA_DIR
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 function hashPassword(pw) {
   return crypto.createHash('sha256').update(pw).digest('hex');
@@ -278,6 +278,71 @@ const JOB_DATA = [
   { title: 'Site Engineer', company: 'Riyadh Projects', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Engineering', salary: 'SAR 4k–18k/mo', desc: 'Construction demand with work visa.' },
   { title: 'Chef de Partie', company: 'Doha Dining', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Hospitality', salary: 'QAR 1.5k–7k/mo', desc: 'Hospitality employment residence.' },
   { title: 'Cybersecurity Analyst', company: 'KL Secure', code: 'MY', name: 'Malaysia', city: 'Kuala Lumpur', category: 'IT', salary: 'MYR 3k–12k/mo', desc: 'Employment Pass for security talent.' },
+
+  // Labour / service / care / driving roles
+  { title: 'Cook / Kitchen Staff', company: 'Toronto Kitchen Co', code: 'CA', name: 'Canada', city: 'Toronto', category: 'Hospitality', salary: 'CAD 18k–45k', desc: 'Restaurant and hotel kitchen cook roles with visa pathway support.' },
+  { title: 'Light Vehicle Driver', company: 'Maple Transit', code: 'CA', name: 'Canada', city: 'Mississauga', category: 'Driving', salary: 'CAD 20k–55k', desc: 'Company driver for logistics and staff transport.' },
+  { title: 'Female Nurse (Care Home)', company: 'Maple Care Homes', code: 'CA', name: 'Canada', city: 'Vancouver', category: 'Healthcare', salary: 'CAD 28k–70k', desc: 'Female nurse / care roles in nursing homes and clinics.' },
+  { title: 'Female Child Care Taker', company: 'Little Steps Daycare', code: 'CA', name: 'Canada', city: 'Calgary', category: 'Care', salary: 'CAD 16k–42k', desc: 'Female childcare / nanny roles for families and daycare centres.' },
+  { title: 'Receptionist', company: 'North Office Services', code: 'CA', name: 'Canada', city: 'Ottawa', category: 'Reception', salary: 'CAD 18k–48k', desc: 'Front desk receptionist for clinics, hotels, and offices.' },
+  { title: 'General Labour Worker', company: 'BuildRight Canada', code: 'CA', name: 'Canada', city: 'Edmonton', category: 'Labour', salary: 'CAD 18k–50k', desc: 'Construction and warehouse general labour with employer support.' },
+  { title: 'Heavy Machinery Driver', company: 'Prairie Heavy Ops', code: 'CA', name: 'Canada', city: 'Winnipeg', category: 'Driving', salary: 'CAD 25k–70k', desc: 'Excavator / loader / heavy equipment operator roles.' },
+
+  { title: 'Cook', company: 'Berlin Bistro Group', code: 'DE', name: 'Germany', city: 'Berlin', category: 'Hospitality', salary: '€14k–32k', desc: 'Hotel and restaurant cook positions with work visa support.' },
+  { title: 'Truck / Delivery Driver', company: 'Rhine Freight', code: 'DE', name: 'Germany', city: 'Frankfurt', category: 'Driving', salary: '€16k–40k', desc: 'Delivery and truck driving for logistics companies.' },
+  { title: 'Female Nurse', company: 'Munich Care Clinic', code: 'DE', name: 'Germany', city: 'Munich', category: 'Healthcare', salary: '€22k–48k', desc: 'Female nurse roles in clinics and elderly care.' },
+  { title: 'Female Child Care Taker', company: 'KinderHaus Berlin', code: 'DE', name: 'Germany', city: 'Berlin', category: 'Care', salary: '€14k–30k', desc: 'Female childcare assistant / childminder roles.' },
+  { title: 'Hotel Receptionist', company: 'Bavaria Hotels', code: 'DE', name: 'Germany', city: 'Munich', category: 'Reception', salary: '€15k–32k', desc: 'Front desk receptionist for hotels and guest houses.' },
+  { title: 'Factory Labour Worker', company: 'Industrie Werk NRW', code: 'DE', name: 'Germany', city: 'Cologne', category: 'Labour', salary: '€15k–35k', desc: 'Factory and production line general labour.' },
+  { title: 'Heavy Machinery Operator', company: 'BauTech Machines', code: 'DE', name: 'Germany', city: 'Hamburg', category: 'Driving', salary: '€18k–42k', desc: 'Construction heavy machinery driver / operator.' },
+
+  { title: 'Cook / Chef Assistant', company: 'London Kitchen Staffing', code: 'GB', name: 'United Kingdom', city: 'London', category: 'Hospitality', salary: '£12k–28k', desc: 'Cook and kitchen assistant roles in hotels and restaurants.' },
+  { title: 'Taxi / Private Hire Driver', company: 'CityRide UK', code: 'GB', name: 'United Kingdom', city: 'Manchester', category: 'Driving', salary: '£12k–30k', desc: 'Driver roles for private hire and company fleets.' },
+  { title: 'Female Nurse', company: 'NHS Care Partners', code: 'GB', name: 'United Kingdom', city: 'Birmingham', category: 'Healthcare', salary: '£14k–35k', desc: 'Female nurse and care home nursing support roles.' },
+  { title: 'Female Child Care Taker', company: 'BrightKids Nursery', code: 'GB', name: 'United Kingdom', city: 'Leeds', category: 'Care', salary: '£11k–26k', desc: 'Female childcare / nursery assistant positions.' },
+  { title: 'Receptionist', company: 'Central Desk UK', code: 'GB', name: 'United Kingdom', city: 'London', category: 'Reception', salary: '£12k–28k', desc: 'Office and clinic receptionist roles.' },
+  { title: 'Warehouse Labour', company: 'Midlands Logistics', code: 'GB', name: 'United Kingdom', city: 'Birmingham', category: 'Labour', salary: '£12k–28k', desc: 'Warehouse packing and general labour work.' },
+  { title: 'Heavy Goods / Machinery Driver', company: 'UK Plant Hire', code: 'GB', name: 'United Kingdom', city: 'Manchester', category: 'Driving', salary: '£14k–36k', desc: 'HGV and heavy machinery driving roles.' },
+
+  { title: 'Cook', company: 'Dubai Hotel Kitchens', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'Hospitality', salary: 'AED 1.8k–5k/mo', desc: 'Hotel and restaurant cook with employment visa.' },
+  { title: 'Company Driver', company: 'Gulf Fleet Services', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'Driving', salary: 'AED 1.5k–4.5k/mo', desc: 'Light vehicle company driver for offices and hotels.' },
+  { title: 'Female Nurse', company: 'Emirates Care Clinics', code: 'AE', name: 'United Arab Emirates', city: 'Abu Dhabi', category: 'Healthcare', salary: 'AED 3k–9k/mo', desc: 'Female nurse roles in clinics and home care.' },
+  { title: 'Female Child Care Taker / Nanny', company: 'Family Care Gulf', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'Care', salary: 'AED 1.5k–4k/mo', desc: 'Female childcare / nanny for family sponsorship.' },
+  { title: 'Receptionist', company: 'Palm Front Desk', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'Reception', salary: 'AED 2k–5.5k/mo', desc: 'Hotel and office receptionist roles.' },
+  { title: 'General Labour / Helper', company: 'Desert Build LLC', code: 'AE', name: 'United Arab Emirates', city: 'Sharjah', category: 'Labour', salary: 'AED 1.2k–3.5k/mo', desc: 'Construction site helper and general labour.' },
+  { title: 'Heavy Machinery Driver', company: 'Gulf Heavy Equipment', code: 'AE', name: 'United Arab Emirates', city: 'Abu Dhabi', category: 'Driving', salary: 'AED 2.5k–7k/mo', desc: 'Crane / excavator / heavy machinery operators.' },
+
+  { title: 'Cook', company: 'Riyadh Catering Co', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Hospitality', salary: 'SAR 1.5k–4.5k/mo', desc: 'Kitchen cook for hotels, camps, and catering.' },
+  { title: 'Driver', company: 'Najd Transport', code: 'SA', name: 'Saudi Arabia', city: 'Jeddah', category: 'Driving', salary: 'SAR 1.5k–4k/mo', desc: 'Company and staff transport driver roles.' },
+  { title: 'Female Nurse', company: 'Kingdom Care Hospitals', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Healthcare', salary: 'SAR 3k–9k/mo', desc: 'Female nurse positions in hospitals and clinics.' },
+  { title: 'Female Child Care Taker', company: 'Family Support KSA', code: 'SA', name: 'Saudi Arabia', city: 'Jeddah', category: 'Care', salary: 'SAR 1.5k–4k/mo', desc: 'Female childcare / domestic care roles.' },
+  { title: 'Receptionist', company: 'Oasis Front Office', code: 'SA', name: 'Saudi Arabia', city: 'Dammam', category: 'Reception', salary: 'SAR 1.8k–4.5k/mo', desc: 'Reception and guest relations roles.' },
+  { title: 'Construction Labour', company: 'Vision Build KSA', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Labour', salary: 'SAR 1.2k–3.8k/mo', desc: 'Site labour and helper roles on construction projects.' },
+  { title: 'Heavy Machinery Driver', company: 'Saudi Plant Ops', code: 'SA', name: 'Saudi Arabia', city: 'Khobar', category: 'Driving', salary: 'SAR 2.5k–8k/mo', desc: 'Heavy equipment and machinery drivers for sites.' },
+
+  { title: 'Cook', company: 'Sydney Kitchen Crew', code: 'AU', name: 'Australia', city: 'Sydney', category: 'Hospitality', salary: 'AUD 22k–55k', desc: 'Cook roles in cafes, hotels, and catering.' },
+  { title: 'Delivery / Truck Driver', company: 'Aussie Freight Local', code: 'AU', name: 'Australia', city: 'Melbourne', category: 'Driving', salary: 'AUD 24k–60k', desc: 'Delivery and truck driving across metro routes.' },
+  { title: 'Female Nurse', company: 'Aussie Care Nursing', code: 'AU', name: 'Australia', city: 'Brisbane', category: 'Healthcare', salary: 'AUD 28k–75k', desc: 'Female nurse roles in aged care and clinics.' },
+  { title: 'Female Child Care Taker', company: 'DownUnder Kids Care', code: 'AU', name: 'Australia', city: 'Perth', category: 'Care', salary: 'AUD 18k–48k', desc: 'Female childcare educator / assistant roles.' },
+  { title: 'Receptionist', company: 'Harbour Desk Services', code: 'AU', name: 'Australia', city: 'Sydney', category: 'Reception', salary: 'AUD 20k–52k', desc: 'Reception roles for offices, clinics, and hotels.' },
+  { title: 'Farm / General Labour', company: 'Outback Labour Hire', code: 'AU', name: 'Australia', city: 'Adelaide', category: 'Labour', salary: 'AUD 18k–50k', desc: 'Farm and general labour seasonal and full-time roles.' },
+  { title: 'Heavy Machinery Driver', company: 'Oz Plant Operators', code: 'AU', name: 'Australia', city: 'Brisbane', category: 'Driving', salary: 'AUD 28k–75k', desc: 'Excavator and heavy machinery operator jobs.' },
+
+  { title: 'Cook', company: 'Doha Kitchen Staff', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Hospitality', salary: 'QAR 1.2k–4k/mo', desc: 'Cook and kitchen helper with work residence.' },
+  { title: 'Driver', company: 'Qatar Fleet Co', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Driving', salary: 'QAR 1.2k–3.8k/mo', desc: 'Company driver for staff and logistics.' },
+  { title: 'Female Nurse', company: 'Qatar Care Nurses', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Healthcare', salary: 'QAR 2.5k–7k/mo', desc: 'Female nurse roles in hospitals and home care.' },
+  { title: 'Female Child Care Taker', company: 'Lusail Family Care', code: 'QA', name: 'Qatar', city: 'Lusail', category: 'Care', salary: 'QAR 1.2k–3.5k/mo', desc: 'Female nanny / childcare for families.' },
+  { title: 'Receptionist', company: 'Doha Front Desk', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Reception', salary: 'QAR 1.5k–4.5k/mo', desc: 'Hotel and clinic receptionist openings.' },
+  { title: 'General Labour', company: 'Qatar Site Labour', code: 'QA', name: 'Qatar', city: 'Al Rayyan', category: 'Labour', salary: 'QAR 1k–3k/mo', desc: 'Construction and camp general labour.' },
+  { title: 'Heavy Machinery Driver', company: 'Qatar Heavy Ops', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Driving', salary: 'QAR 2k–6k/mo', desc: 'Heavy machinery and plant operators.' },
+
+  { title: 'Cook', company: 'Poland Kitchen Hire', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Hospitality', salary: 'PLN 2k–5.5k/mo', desc: 'Cook roles in restaurants and hotels.' },
+  { title: 'Driver', company: 'Polska Road Services', code: 'PL', name: 'Poland', city: 'Kraków', category: 'Driving', salary: 'PLN 2.2k–6k/mo', desc: 'Delivery and company driver positions.' },
+  { title: 'Female Nurse / Caregiver', company: 'Warsaw Care Team', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Healthcare', salary: 'PLN 2.5k–6.5k/mo', desc: 'Female nurse and elderly care roles.' },
+  { title: 'Female Child Care Taker', company: 'Kraków Kids Care', code: 'PL', name: 'Poland', city: 'Kraków', category: 'Care', salary: 'PLN 2k–5k/mo', desc: 'Female childcare and babysitter roles.' },
+  { title: 'Receptionist', company: 'Office Desk PL', code: 'PL', name: 'Poland', city: 'Wrocław', category: 'Reception', salary: 'PLN 2k–5k/mo', desc: 'Reception and admin front desk roles.' },
+  { title: 'Factory / Warehouse Labour', company: 'PL Production Hire', code: 'PL', name: 'Poland', city: 'Gdańsk', category: 'Labour', salary: 'PLN 2k–5.5k/mo', desc: 'Factory and warehouse labour workers.' },
+  { title: 'Heavy Machinery Driver', company: 'BuildPlant Poland', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Driving', salary: 'PLN 2.8k–7k/mo', desc: 'Construction machinery operators and drivers.' },
 ];
 
 function seed(db) {
