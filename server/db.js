@@ -10,7 +10,7 @@ const DATA_DIR = process.env.DATA_DIR
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 function hashPassword(pw) {
   return crypto.createHash('sha256').update(pw).digest('hex');
@@ -248,36 +248,36 @@ const VISA_DATA = [
 ];
 
 const JOB_DATA = [
-  { title: 'Software Engineer', company: 'NorthPeak Tech', code: 'CA', name: 'Canada', city: 'Toronto', category: 'IT', salary: 'CAD 85k–120k', desc: 'Full-stack role with PR-friendly employer support.' },
-  { title: 'Cloud / DevOps Engineer', company: 'Maple Cloud', code: 'CA', name: 'Canada', city: 'Vancouver', category: 'IT', salary: 'CAD 90k–130k', desc: 'AWS/Azure DevOps with Express Entry friendly profile.' },
-  { title: 'Registered Nurse', company: 'CareBridge Health', code: 'CA', name: 'Canada', city: 'Calgary', category: 'Healthcare', salary: 'CAD 70k–95k', desc: 'Hospital nursing roles with licensing guidance.' },
-  { title: 'Java Backend Developer', company: 'Berlin SoftLabs', code: 'DE', name: 'Germany', city: 'Berlin', category: 'IT', salary: '€55k–75k', desc: 'EU Blue Card eligible backend engineering.' },
-  { title: 'Mechanical Engineer', company: 'AutoTechnik GmbH', code: 'DE', name: 'Germany', city: 'Stuttgart', category: 'Engineering', salary: '€50k–70k', desc: 'Automotive OEM supplier — skilled worker visa.' },
-  { title: 'Data Engineer', company: 'Rhine Analytics', code: 'DE', name: 'Germany', city: 'Munich', category: 'IT', salary: '€60k–80k', desc: 'Python/Spark pipelines, Blue Card salary band.' },
-  { title: 'Full Stack Developer', company: 'Thames Digital', code: 'GB', name: 'United Kingdom', city: 'London', category: 'IT', salary: '£45k–70k', desc: 'Skilled Worker visa sponsorship available.' },
-  { title: 'Product Manager', company: 'Northern Apps', code: 'GB', name: 'United Kingdom', city: 'Manchester', category: 'Product', salary: '£50k–75k', desc: 'SaaS product role with CoS sponsorship.' },
-  { title: 'Healthcare Assistant', company: 'CareUK Partners', code: 'GB', name: 'United Kingdom', city: 'Birmingham', category: 'Healthcare', salary: '£24k–32k', desc: 'Care sector demand with visa support pathways.' },
-  { title: 'Frontend Engineer', company: 'Dam Digital', code: 'NL', name: 'Netherlands', city: 'Amsterdam', category: 'IT', salary: '€50k–70k', desc: 'Highly Skilled Migrant eligible React role.' },
-  { title: 'QA Automation Engineer', company: 'Eindhoven Labs', code: 'NL', name: 'Netherlands', city: 'Eindhoven', category: 'IT', salary: '€45k–62k', desc: 'Embedded/test automation with HSM sponsor.' },
-  { title: 'Software Engineer', company: 'Liffey Tech', code: 'IE', name: 'Ireland', city: 'Dublin', category: 'IT', salary: '€45k–70k', desc: 'Critical Skills list occupation.' },
-  { title: 'Account Manager', company: 'Atlantic Sales', code: 'IE', name: 'Ireland', city: 'Cork', category: 'Sales', salary: '€35k–50k', desc: 'B2B SaaS sales with EU base.' },
-  { title: 'Full Stack Developer', company: 'Lisboa Code', code: 'PT', name: 'Portugal', city: 'Lisbon', category: 'IT', salary: '€30k–48k', desc: 'D3 qualified worker track.' },
-  { title: 'Data Scientist', company: 'Nordic Insight', code: 'SE', name: 'Sweden', city: 'Stockholm', category: 'IT', salary: 'SEK 450k–650k', desc: 'Work permit for AI/ML talent.' },
-  { title: 'Civil Engineer', company: 'Harbour Build', code: 'AU', name: 'Australia', city: 'Sydney', category: 'Engineering', salary: 'AUD 90k–130k', desc: 'Points-friendly engineering role.' },
-  { title: 'Software Engineer', company: 'Outback Cloud', code: 'AU', name: 'Australia', city: 'Melbourne', category: 'IT', salary: 'AUD 95k–140k', desc: 'Skilled migration aligned tech role.' },
-  { title: 'Software Engineer', company: 'Bay Area Systems', code: 'US', name: 'United States', city: 'San Francisco', category: 'IT', salary: 'USD 120k–170k', desc: 'H-1B specialty occupation track.' },
-  { title: 'Data Analyst', company: 'Austin Metrics', code: 'US', name: 'United States', city: 'Austin', category: 'IT', salary: 'USD 85k–115k', desc: 'Analytics role for specialty visa profiles.' },
-  { title: 'Software Engineer', company: 'Dubai FinTech', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'IT', salary: 'AED 15k–25k/mo', desc: 'Tax-free tech role with employment visa.' },
-  { title: 'Hospitality Supervisor', company: 'Gulf Hotels Group', code: 'AE', name: 'United Arab Emirates', city: 'Abu Dhabi', category: 'Hospitality', salary: 'AED 8k–14k/mo', desc: 'Hotel operations with sponsor visa.' },
-  { title: 'Software Developer', company: 'Kiwi Soft', code: 'NZ', name: 'New Zealand', city: 'Auckland', category: 'IT', salary: 'NZD 80k–110k', desc: 'Skilled Migrant aligned developer role.' },
-  { title: 'Cloud Engineer', company: 'Lion City Cloud', code: 'SG', name: 'Singapore', city: 'Singapore', category: 'IT', salary: 'SGD 6k–10k/mo', desc: 'Employment Pass for cloud talent.' },
-  { title: 'Embedded Software Engineer', company: 'Tokyo Devices', code: 'JP', name: 'Japan', city: 'Tokyo', category: 'IT', salary: 'JPY 5.5M–8M', desc: 'Engineer visa with COE support.' },
-  { title: 'Backend Developer', company: 'Paris SaaS', code: 'FR', name: 'France', city: 'Paris', category: 'IT', salary: '€42k–60k', desc: 'Talent Passport / salarié eligible.' },
-  { title: 'Warehouse Operative', company: 'Warsaw Logistics', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Logistics', salary: 'PLN 5k–7k/mo', desc: 'Work visa with employer declaration.' },
-  { title: 'iOS Developer', company: 'Madrid Mobile', code: 'ES', name: 'Spain', city: 'Madrid', category: 'IT', salary: '€35k–55k', desc: 'Highly qualified worker route.' },
-  { title: 'Site Engineer', company: 'Riyadh Projects', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Engineering', salary: 'SAR 10k–18k/mo', desc: 'Construction demand with work visa.' },
-  { title: 'Chef de Partie', company: 'Doha Dining', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Hospitality', salary: 'QAR 4k–7k/mo', desc: 'Hospitality employment residence.' },
-  { title: 'Cybersecurity Analyst', company: 'KL Secure', code: 'MY', name: 'Malaysia', city: 'Kuala Lumpur', category: 'IT', salary: 'MYR 7k–12k/mo', desc: 'Employment Pass for security talent.' },
+  { title: 'Software Engineer', company: 'NorthPeak Tech', code: 'CA', name: 'Canada', city: 'Toronto', category: 'IT', salary: 'CAD 38k–120k', desc: 'Full-stack role with PR-friendly employer support.' },
+  { title: 'Cloud / DevOps Engineer', company: 'Maple Cloud', code: 'CA', name: 'Canada', city: 'Vancouver', category: 'IT', salary: 'CAD 40k–130k', desc: 'AWS/Azure DevOps with Express Entry friendly profile.' },
+  { title: 'Registered Nurse', company: 'CareBridge Health', code: 'CA', name: 'Canada', city: 'Calgary', category: 'Healthcare', salary: 'CAD 30k–95k', desc: 'Hospital nursing roles with licensing guidance.' },
+  { title: 'Java Backend Developer', company: 'Berlin SoftLabs', code: 'DE', name: 'Germany', city: 'Berlin', category: 'IT', salary: '€25k–75k', desc: 'EU Blue Card eligible backend engineering.' },
+  { title: 'Mechanical Engineer', company: 'AutoTechnik GmbH', code: 'DE', name: 'Germany', city: 'Stuttgart', category: 'Engineering', salary: '€22k–70k', desc: 'Automotive OEM supplier — skilled worker visa.' },
+  { title: 'Data Engineer', company: 'Rhine Analytics', code: 'DE', name: 'Germany', city: 'Munich', category: 'IT', salary: '€27k–80k', desc: 'Python/Spark pipelines, Blue Card salary band.' },
+  { title: 'Full Stack Developer', company: 'Thames Digital', code: 'GB', name: 'United Kingdom', city: 'London', category: 'IT', salary: '£20k–70k', desc: 'Skilled Worker visa sponsorship available.' },
+  { title: 'Product Manager', company: 'Northern Apps', code: 'GB', name: 'United Kingdom', city: 'Manchester', category: 'Product', salary: '£22k–75k', desc: 'SaaS product role with CoS sponsorship.' },
+  { title: 'Healthcare Assistant', company: 'CareUK Partners', code: 'GB', name: 'United Kingdom', city: 'Birmingham', category: 'Healthcare', salary: '£10k–32k', desc: 'Care sector demand with visa support pathways.' },
+  { title: 'Frontend Engineer', company: 'Dam Digital', code: 'NL', name: 'Netherlands', city: 'Amsterdam', category: 'IT', salary: '€22k–70k', desc: 'Highly Skilled Migrant eligible React role.' },
+  { title: 'QA Automation Engineer', company: 'Eindhoven Labs', code: 'NL', name: 'Netherlands', city: 'Eindhoven', category: 'IT', salary: '€20k–62k', desc: 'Embedded/test automation with HSM sponsor.' },
+  { title: 'Software Engineer', company: 'Liffey Tech', code: 'IE', name: 'Ireland', city: 'Dublin', category: 'IT', salary: '€20k–70k', desc: 'Critical Skills list occupation.' },
+  { title: 'Account Manager', company: 'Atlantic Sales', code: 'IE', name: 'Ireland', city: 'Cork', category: 'Sales', salary: '€15k–50k', desc: 'B2B SaaS sales with EU base.' },
+  { title: 'Full Stack Developer', company: 'Lisboa Code', code: 'PT', name: 'Portugal', city: 'Lisbon', category: 'IT', salary: '€13k–48k', desc: 'D3 qualified worker track.' },
+  { title: 'Data Scientist', company: 'Nordic Insight', code: 'SE', name: 'Sweden', city: 'Stockholm', category: 'IT', salary: 'SEK 200k–650k', desc: 'Work permit for AI/ML talent.' },
+  { title: 'Civil Engineer', company: 'Harbour Build', code: 'AU', name: 'Australia', city: 'Sydney', category: 'Engineering', salary: 'AUD 40k–130k', desc: 'Points-friendly engineering role.' },
+  { title: 'Software Engineer', company: 'Outback Cloud', code: 'AU', name: 'Australia', city: 'Melbourne', category: 'IT', salary: 'AUD 40k–140k', desc: 'Skilled migration aligned tech role.' },
+  { title: 'Software Engineer', company: 'Bay Area Systems', code: 'US', name: 'United States', city: 'San Francisco', category: 'IT', salary: 'USD 50k–170k', desc: 'H-1B specialty occupation track.' },
+  { title: 'Data Analyst', company: 'Austin Metrics', code: 'US', name: 'United States', city: 'Austin', category: 'IT', salary: 'USD 38k–115k', desc: 'Analytics role for specialty visa profiles.' },
+  { title: 'Software Engineer', company: 'Dubai FinTech', code: 'AE', name: 'United Arab Emirates', city: 'Dubai', category: 'IT', salary: 'AED 6k–25k/mo', desc: 'Tax-free tech role with employment visa.' },
+  { title: 'Hospitality Supervisor', company: 'Gulf Hotels Group', code: 'AE', name: 'United Arab Emirates', city: 'Abu Dhabi', category: 'Hospitality', salary: 'AED 3.5k–14k/mo', desc: 'Hotel operations with sponsor visa.' },
+  { title: 'Software Developer', company: 'Kiwi Soft', code: 'NZ', name: 'New Zealand', city: 'Auckland', category: 'IT', salary: 'NZD 35k–110k', desc: 'Skilled Migrant aligned developer role.' },
+  { title: 'Cloud Engineer', company: 'Lion City Cloud', code: 'SG', name: 'Singapore', city: 'Singapore', category: 'IT', salary: 'SGD 2.5k–10k/mo', desc: 'Employment Pass for cloud talent.' },
+  { title: 'Embedded Software Engineer', company: 'Tokyo Devices', code: 'JP', name: 'Japan', city: 'Tokyo', category: 'IT', salary: 'JPY 2.5M–8M', desc: 'Engineer visa with COE support.' },
+  { title: 'Backend Developer', company: 'Paris SaaS', code: 'FR', name: 'France', city: 'Paris', category: 'IT', salary: '€18k–60k', desc: 'Talent Passport / salarié eligible.' },
+  { title: 'Warehouse Operative', company: 'Warsaw Logistics', code: 'PL', name: 'Poland', city: 'Warsaw', category: 'Logistics', salary: 'PLN 2k–7k/mo', desc: 'Work visa with employer declaration.' },
+  { title: 'iOS Developer', company: 'Madrid Mobile', code: 'ES', name: 'Spain', city: 'Madrid', category: 'IT', salary: '€15k–55k', desc: 'Highly qualified worker route.' },
+  { title: 'Site Engineer', company: 'Riyadh Projects', code: 'SA', name: 'Saudi Arabia', city: 'Riyadh', category: 'Engineering', salary: 'SAR 4k–18k/mo', desc: 'Construction demand with work visa.' },
+  { title: 'Chef de Partie', company: 'Doha Dining', code: 'QA', name: 'Qatar', city: 'Doha', category: 'Hospitality', salary: 'QAR 1.5k–7k/mo', desc: 'Hospitality employment residence.' },
+  { title: 'Cybersecurity Analyst', company: 'KL Secure', code: 'MY', name: 'Malaysia', city: 'Kuala Lumpur', category: 'IT', salary: 'MYR 3k–12k/mo', desc: 'Employment Pass for security talent.' },
 ];
 
 function seed(db) {
@@ -290,6 +290,7 @@ function seed(db) {
     insertVisa.run(v.code, v.name, v.flag, v.type, v.category, v.price, v.processing, v.validity, v.entries, JSON.stringify(v.reqs), v.desc, v.popular);
   }
 
+  // Seed jobs once (schema bump recreates empty table)
   const jobCount = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
   if (!jobCount) {
     const insertJob = db.prepare(`
