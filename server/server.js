@@ -444,7 +444,7 @@ app.post('/api/admin/logout', requireAdmin, (req, res) => {
 app.get('/api/admin/orders', requireAdmin, (req, res) => {
   const { status, kyc_status, payment_status } = req.query;
   let sql = `
-    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type
+    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type, v.category AS visa_category
     FROM orders o JOIN visas v ON o.visa_id = v.id WHERE 1=1
   `;
   const params = [];
@@ -455,8 +455,27 @@ app.get('/api/admin/orders', requireAdmin, (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
+app.get('/api/admin/orders/:id', requireAdmin, (req, res) => {
+  const order = db.prepare(`
+    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type, v.category AS visa_category,
+           v.country_code, v.processing_days, v.validity_days, v.description AS visa_description
+    FROM orders o
+    JOIN visas v ON o.visa_id = v.id
+    WHERE o.id = ?
+  `).get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  const kyc = db.prepare(`
+    SELECT * FROM kyc_verifications WHERE order_id = ? ORDER BY submitted_at DESC
+  `).all(order.id);
+
+  res.json({ ...order, kyc_submissions: kyc });
+});
+
 app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
-  const { order_status, kyc_status, kyc_notes } = req.body || {};
+  const {
+    order_status, kyc_status, kyc_notes, payment_status, notes,
+  } = req.body || {};
   const orderId = req.params.id;
 
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
@@ -467,9 +486,12 @@ app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
   if (order_status) { updates.push('order_status = ?'); params.push(order_status); }
   if (kyc_status) { updates.push('kyc_status = ?'); params.push(kyc_status); }
   if (kyc_notes !== undefined) { updates.push('kyc_notes = ?'); params.push(kyc_notes); }
-  if (kyc_status && kyc_status !== 'pending') {
+  if (payment_status) { updates.push('payment_status = ?'); params.push(payment_status); }
+  if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+  if (kyc_status && kyc_status !== 'pending' && kyc_status !== 'n/a' && kyc_status !== 'submitted') {
     updates.push("kyc_reviewed_at = datetime('now')");
   }
+  if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
   updates.push("updated_at = datetime('now')");
 
   db.prepare(`UPDATE orders SET ${updates.join(', ')} WHERE id = ?`).run(...params, orderId);
@@ -484,7 +506,37 @@ app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
     `).run(kyc_status === 'verified' ? 'approved' : 'rejected', kyc_notes || null, orderId);
   }
 
-  res.json({ message: 'Order updated' });
+  const updated = db.prepare(`
+    SELECT o.*, v.country_name, v.flag_emoji, v.visa_type
+    FROM orders o JOIN visas v ON o.visa_id = v.id WHERE o.id = ?
+  `).get(orderId);
+
+  res.json({ message: 'Order updated', order: updated });
+});
+
+app.delete('/api/admin/orders/:id', requireAdmin, (req, res) => {
+  const orderId = req.params.id;
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  const fileNames = [];
+  const kycRows = db.prepare('SELECT id_document_path, selfie_path FROM kyc_verifications WHERE order_id = ?').all(orderId);
+  for (const row of kycRows) {
+    if (row.id_document_path) fileNames.push(path.basename(row.id_document_path));
+    if (row.selfie_path) fileNames.push(path.basename(row.selfie_path));
+  }
+  if (order.kyc_document_path) fileNames.push(path.basename(order.kyc_document_path));
+  if (order.kyc_selfie_path) fileNames.push(path.basename(order.kyc_selfie_path));
+
+  db.prepare('DELETE FROM kyc_verifications WHERE order_id = ?').run(orderId);
+  db.prepare('DELETE FROM orders WHERE id = ?').run(orderId);
+
+  for (const name of fileNames) {
+    const fp = path.join(UPLOAD_DIR, name);
+    try { if (fs.existsSync(fp)) fs.unlinkSync(fp); } catch { /* ignore */ }
+  }
+
+  res.json({ message: 'Application deleted', id: orderId });
 });
 
 app.get('/api/admin/kyc', requireAdmin, (req, res) => {

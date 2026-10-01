@@ -84,6 +84,13 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function escapeJs(str) {
+  return String(str ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, ' ');
+}
+
 async function loadPopularVisas() {
   try {
     const visas = await api('/api/visas?popular=1');
@@ -689,6 +696,10 @@ async function loadAdminOrders() {
       return;
     }
     container.innerHTML = `
+      <div class="admin-toolbar">
+        <span>${orders.length} application${orders.length === 1 ? '' : 's'}</span>
+        <button type="button" class="btn btn-sm btn-outline" onclick="loadAdminOrders()">Refresh</button>
+      </div>
       <table class="admin-table">
         <thead>
           <tr>
@@ -696,8 +707,8 @@ async function loadAdminOrders() {
             <th>Name</th>
             <th>Visa</th>
             <th>Job</th>
-            <th>Net Worth</th>
             <th>Status</th>
+            <th>KYC</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -706,26 +717,180 @@ async function loadAdminOrders() {
             <tr>
               <td title="${escapeHtml(o.order_number)}">${escapeHtml((o.order_number || '').slice(0, 14))}…</td>
               <td>${escapeHtml(o.applicant_name)}</td>
-              <td>${o.flag_emoji} ${escapeHtml(o.country_name)}</td>
+              <td>${o.flag_emoji || ''} ${escapeHtml(o.country_name || '')}</td>
               <td>${escapeHtml(o.occupation || '—')}</td>
-              <td>${escapeHtml(o.net_worth || '—')}</td>
               <td><span class="status-badge status-${escapeHtml(o.order_status)}">${escapeHtml(o.order_status)}</span></td>
-              <td style="white-space:nowrap;">
-                <select onchange="updateOrderStatus('${escapeHtml(o.id)}', this.value)" style="padding:0.25rem;font-size:0.8rem;">
-                  <option value="">Update...</option>
-                  <option value="pending">Pending</option>
-                  <option value="processing">Reviewing</option>
-                  <option value="completed">Approve (open KYC)</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <button type="button" class="btn btn-sm btn-outline" style="margin-left:0.35rem;" onclick="copyTrackId('${escapeHtml(o.order_number)}')">Copy Track ID</button>
-                ${o.order_status === 'completed' ? `<button type="button" class="btn btn-sm btn-outline" style="margin-left:0.35rem;" onclick="copyKycLink('${escapeHtml(o.order_number)}')">Copy KYC link</button>` : ''}
+              <td><span class="status-badge status-${escapeHtml(o.kyc_status || 'n/a')}">${escapeHtml(o.kyc_status || 'n/a')}</span></td>
+              <td class="admin-actions">
+                <button type="button" class="btn btn-sm btn-primary" onclick="openAdminOrder('${escapeJs(o.id)}')">View / Manage</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="copyTrackId('${escapeJs(o.order_number)}')">Copy ID</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="deleteAdminOrder('${escapeJs(o.id)}', '${escapeJs(o.applicant_name)}')">Delete</button>
               </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
+  } catch (e) { /* handled */ }
+}
+
+function fieldRow(label, value) {
+  const v = value == null || value === '' ? '—' : String(value);
+  return `<div class="admin-field"><span class="admin-field-label">${escapeHtml(label)}</span><span class="admin-field-value">${escapeHtml(v)}</span></div>`;
+}
+
+function fileLink(filePath) {
+  if (!filePath) return '—';
+  const name = String(filePath).split(/[/\\\\]/).pop();
+  return `<a href="/api/files/${encodeURIComponent(name)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`;
+}
+
+async function openAdminOrder(orderId) {
+  try {
+    const o = await api(`/api/admin/orders/${orderId}`);
+    const modal = document.getElementById('admin-order-modal');
+    const body = document.getElementById('admin-order-detail');
+    document.getElementById('admin-modal-title').textContent =
+      `${o.applicant_name || 'Application'} — ${o.order_number || ''}`;
+
+    const kycBlocks = (o.kyc_submissions || []).map((k, i) => `
+      <div class="admin-kyc-card">
+        <h5>KYC #${i + 1} — ${escapeHtml(k.status)}</h5>
+        <div class="admin-field-grid">
+          ${fieldRow('Full name', k.full_name)}
+          ${fieldRow('DOB', k.date_of_birth)}
+          ${fieldRow('Nationality', k.nationality)}
+          ${fieldRow('ID type', k.id_type)}
+          ${fieldRow('ID number', k.id_number)}
+          ${fieldRow('Submitted', k.submitted_at)}
+          <div class="admin-field"><span class="admin-field-label">ID document</span><span class="admin-field-value">${fileLink(k.id_document_path)}</span></div>
+          <div class="admin-field"><span class="admin-field-label">Selfie</span><span class="admin-field-value">${fileLink(k.selfie_path)}</span></div>
+        </div>
+      </div>
+    `).join('') || '<p class="admin-muted">No KYC documents submitted yet.</p>';
+
+    body.innerHTML = `
+      <div class="admin-detail-actions">
+        <label>Application status
+          <select id="adm-order-status">
+            <option value="pending" ${o.order_status === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="processing" ${o.order_status === 'processing' ? 'selected' : ''}>Reviewing</option>
+            <option value="completed" ${o.order_status === 'completed' ? 'selected' : ''}>Approved (open KYC)</option>
+            <option value="rejected" ${o.order_status === 'rejected' ? 'selected' : ''}>Rejected</option>
+          </select>
+        </label>
+        <label>Payment
+          <select id="adm-payment-status">
+            <option value="n/a" ${o.payment_status === 'n/a' ? 'selected' : ''}>n/a</option>
+            <option value="pending" ${o.payment_status === 'pending' ? 'selected' : ''}>pending</option>
+            <option value="confirmed" ${o.payment_status === 'confirmed' ? 'selected' : ''}>confirmed</option>
+            <option value="failed" ${o.payment_status === 'failed' ? 'selected' : ''}>failed</option>
+          </select>
+        </label>
+        <label>KYC status
+          <select id="adm-kyc-status">
+            <option value="n/a" ${o.kyc_status === 'n/a' ? 'selected' : ''}>n/a</option>
+            <option value="pending" ${o.kyc_status === 'pending' ? 'selected' : ''}>pending</option>
+            <option value="submitted" ${o.kyc_status === 'submitted' ? 'selected' : ''}>submitted</option>
+            <option value="verified" ${o.kyc_status === 'verified' ? 'selected' : ''}>verified</option>
+            <option value="rejected" ${o.kyc_status === 'rejected' ? 'selected' : ''}>rejected</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-primary" onclick="saveAdminOrder('${escapeJs(o.id)}')">Save changes</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="copyTrackId('${escapeJs(o.order_number)}')">Copy Track ID</button>
+        ${o.order_status === 'completed' ? `<button type="button" class="btn btn-sm btn-outline" onclick="copyKycLink('${escapeJs(o.order_number)}')">Copy KYC link</button>` : ''}
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteAdminOrder('${escapeJs(o.id)}', '${escapeJs(o.applicant_name)}')">Delete application</button>
+      </div>
+
+      <label class="admin-notes-label">Admin / KYC notes
+        <textarea id="adm-kyc-notes" rows="2" placeholder="Internal notes or rejection reason">${escapeHtml(o.kyc_notes || '')}</textarea>
+      </label>
+
+      <h4 class="admin-section-title">Visa pathway</h4>
+      <div class="admin-field-grid">
+        ${fieldRow('Country', `${o.flag_emoji || ''} ${o.country_name || ''}`)}
+        ${fieldRow('Visa type', o.visa_type)}
+        ${fieldRow('Category', o.visa_category)}
+        ${fieldRow('Track ID', o.order_number)}
+        ${fieldRow('Submitted', o.created_at)}
+        ${fieldRow('Updated', o.updated_at)}
+        ${fieldRow('KYC fee', o.amount != null ? `$${o.amount}` : '—')}
+        ${fieldRow('Card last4', o.card_last4)}
+      </div>
+
+      <h4 class="admin-section-title">Applicant details (full form)</h4>
+      <div class="admin-field-grid">
+        ${fieldRow('Full name', o.applicant_name)}
+        ${fieldRow('Email', o.applicant_email)}
+        ${fieldRow('Phone', o.applicant_phone)}
+        ${fieldRow('Nationality', o.nationality)}
+        ${fieldRow('Date of birth', o.date_of_birth)}
+        ${fieldRow('Age', o.age)}
+        ${fieldRow('Passport', o.passport_number)}
+        ${fieldRow('ID type', o.id_type)}
+        ${fieldRow('ID number', o.id_number)}
+        ${fieldRow('Residence', o.residence)}
+      </div>
+
+      <h4 class="admin-section-title">Stay & work / finance</h4>
+      <div class="admin-field-grid">
+        ${fieldRow('Purpose', o.purpose)}
+        ${fieldRow('Occupation', o.occupation)}
+        ${fieldRow('Employment', o.employment_status)}
+        ${fieldRow('Work experience', o.work_experience)}
+        ${fieldRow('Education', o.education)}
+        ${fieldRow('Language', o.language)}
+        ${fieldRow('Visa duration (days)', o.visa_duration)}
+        ${fieldRow('Travel date', o.travel_date)}
+        ${fieldRow('Net worth', o.net_worth)}
+        ${fieldRow('Annual income', o.annual_income)}
+        ${fieldRow('Trip funds', o.trip_funds)}
+        ${fieldRow('User notes', o.notes)}
+      </div>
+
+      <h4 class="admin-section-title">KYC documents</h4>
+      ${kycBlocks}
+    `;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  } catch (e) { /* handled */ }
+}
+
+function closeAdminOrder() {
+  const modal = document.getElementById('admin-order-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function saveAdminOrder(orderId) {
+  try {
+    const body = {
+      order_status: document.getElementById('adm-order-status')?.value,
+      payment_status: document.getElementById('adm-payment-status')?.value,
+      kyc_status: document.getElementById('adm-kyc-status')?.value,
+      kyc_notes: document.getElementById('adm-kyc-notes')?.value ?? '',
+    };
+    await api(`/api/admin/orders/${orderId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+    showToast('Application updated', 'success');
+    loadAdminOrders();
+    loadAdminDashboard();
+    openAdminOrder(orderId);
+  } catch (e) { /* handled */ }
+}
+
+async function deleteAdminOrder(orderId, name) {
+  const ok = confirm(`Delete application for "${name || 'this user'}"?\n\nThis permanently removes the form, KYC files, and cannot be undone.`);
+  if (!ok) return;
+  try {
+    await api(`/api/admin/orders/${orderId}`, { method: 'DELETE' });
+    showToast('Application deleted', 'success');
+    closeAdminOrder();
+    loadAdminOrders();
+    loadAdminDashboard();
   } catch (e) { /* handled */ }
 }
 
@@ -737,7 +902,7 @@ async function updateOrderStatus(orderId, status) {
       body: JSON.stringify({ order_status: status }),
     });
     if (status === 'completed') {
-      showToast('Approved — KYC unlocked. Copy KYC link to send to user.', 'success');
+      showToast('Approved — KYC unlocked. Open View / Manage to copy KYC link.', 'success');
     } else {
       showToast('Updated', 'success');
     }

@@ -382,7 +382,30 @@
             <div id="admin-visas" class="admin-panel" style="display:none;"></div>
           </div>
         </div>
+
+        <!-- Full application study / manage modal -->
+        <div id="admin-order-modal" class="admin-modal" style="display:none;" onclick="if(event.target===this)closeAdminOrder()">
+          <div class="admin-modal-card" role="dialog" aria-modal="true">
+            <div class="admin-modal-head">
+              <h3 id="admin-modal-title">Application</h3>
+              <button type="button" class="btn btn-sm btn-outline" onclick="closeAdminOrder()">Close</button>
+            </div>
+            <div id="admin-order-detail" class="admin-modal-body"></div>
+          </div>
+        </div>
       </section>
+
+      <!-- Admin application detail modal -->
+      <div id="admin-order-modal" class="admin-modal" hidden>
+        <div class="admin-modal-backdrop" onclick="closeAdminOrder()"></div>
+        <div class="admin-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-order-title">
+          <div class="admin-modal-header">
+            <h3 id="admin-order-title">Application</h3>
+            <button type="button" class="admin-modal-close" onclick="closeAdminOrder()" aria-label="Close">×</button>
+          </div>
+          <div id="admin-order-body" class="admin-modal-body"></div>
+        </div>
+      </div>
 
       <section id="view-success" class="view">
         <div class="success-container">
