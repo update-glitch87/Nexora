@@ -28,8 +28,7 @@ function showView(viewName) {
   if (view) view.classList.add('active');
   window.scrollTo(0, 0);
 
-  const navLinks = document.getElementById('navLinks');
-  if (navLinks) navLinks.classList.remove('open');
+  closeNav();
 
   if (viewName === 'home') {
     loadPopularVisas();
@@ -49,8 +48,17 @@ function showView(viewName) {
   }
 }
 
+function closeNav() {
+  const navLinks = document.getElementById('navLinks');
+  if (navLinks) navLinks.classList.remove('open');
+  document.body.classList.remove('nav-open');
+}
+
 function toggleNav() {
-  document.getElementById('navLinks').classList.toggle('open');
+  const navLinks = document.getElementById('navLinks');
+  if (!navLinks) return;
+  navLinks.classList.toggle('open');
+  document.body.classList.toggle('nav-open', navLinks.classList.contains('open'));
 }
 
 async function api(url, options = {}) {
@@ -1333,4 +1341,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Enter') trackOrder();
     });
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeNav();
+  });
+  document.addEventListener('click', (e) => {
+    const nav = document.getElementById('navbar');
+    if (!nav || !document.body.classList.contains('nav-open')) return;
+    if (!nav.contains(e.target)) closeNav();
+  });
 });

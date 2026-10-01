@@ -112,6 +112,7 @@ a:hover { text-decoration: none; }
   align-items: center;
   justify-content: space-between;
   height: 72px;
+  position: relative;
 }
 
 .nav-logo {
@@ -483,7 +484,7 @@ a:hover { text-decoration: none; }
    ═══════════════════════════════════════════════════════════ */
 .visa-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 1.5rem;
   perspective: var(--perspective);
 }
@@ -1929,63 +1930,301 @@ a:hover { text-decoration: none; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
+   RESPONSIVE — mobile max
    ═══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .nav-toggle { display: block; }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-container {
+    padding: 0 1rem;
+    height: 64px;
+  }
 
   .nav-links {
     display: none;
     position: absolute;
-    top: 72px;
+    top: 64px;
     left: 0;
     right: 0;
-    background: rgba(10, 14, 26, 0.95);
+    background: rgba(10, 14, 26, 0.98);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     flex-direction: column;
-    padding: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    gap: 0.25rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 0.35rem;
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
   }
 
   .nav-links.open { display: flex; }
 
-  .hero { padding: 4rem 1rem 3rem; }
-  .hero-content h1 { font-size: 2rem; }
-  .hero-content p { font-size: 1rem; }
+  .nav-link {
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    border-radius: var(--radius-sm);
+    width: 100%;
+  }
+
+  .nav-link:hover,
+  .nav-link:active {
+    background: var(--bg-glass-strong);
+  }
+
+  body.nav-open { overflow: hidden; }
+
+  .hero {
+    padding: 3.25rem 1rem 2.75rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .hero-content h1 { font-size: clamp(1.7rem, 8vw, 2.15rem); }
+  .hero-content p {
+    font-size: 0.98rem;
+    margin-bottom: 1.5rem;
+    padding: 0 0.25rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .hero-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .hero-whatsapp { margin-top: 1.25rem; }
+  .wa-btns {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wa-btns .btn-whatsapp {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
 
   .hero-stats { flex-direction: column; align-items: center; }
   .stat-card { width: 100%; max-width: 300px; }
 
-  .form-row { grid-template-columns: 1fr; }
+  .section {
+    padding: 2.5rem 1rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
 
-  .detail-header { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
+  .form-container {
+    padding: 0 1rem 2.5rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .form-section {
+    padding: 1.25rem;
+    border-radius: var(--radius);
+  }
+
+  .form-row { grid-template-columns: 1fr; gap: 0.85rem; }
+
+  /* Prevent iOS zoom on focus */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .search-input,
+  .filter-select {
+    font-size: 16px !important;
+    min-height: 48px;
+  }
+
+  .btn, .btn-lg, .btn-sm {
+    min-height: 44px;
+  }
+  .btn-lg { width: 100%; }
+  .btn-full { min-height: 52px; }
+
+  .detail-header { flex-direction: column; text-align: center; padding: 1.5rem 1rem; }
   .detail-price { margin-left: 0; text-align: center; }
   .detail-meta { grid-template-columns: 1fr; }
 
-  .track-input-group { flex-direction: column; }
+  .track-input-group {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .track-input-group .btn {
+    width: 100%;
+    min-height: 48px;
+  }
 
-  .status-timeline { flex-direction: column; gap: 1.25rem; }
+  .status-timeline { flex-direction: column; gap: 0.85rem; margin: 1.25rem 0; }
   .status-timeline::before { display: none; }
-  .timeline-step { flex-direction: row; justify-content: flex-start; }
+  .timeline-step { flex-direction: row; justify-content: flex-start; gap: 0.85rem; }
   .timeline-label { text-align: left; }
+  .timeline-dot { width: 40px; height: 40px; flex-shrink: 0; font-size: 1.1rem; }
 
-  .visa-grid { grid-template-columns: 1fr; }
-  .filters { flex-direction: column; }
-  .filter-group { min-width: 100%; }
-  .admin-stats { grid-template-columns: repeat(2, 1fr); }
+  .visa-grid,
+  .job-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .visa-card:hover,
+  .job-card:hover {
+    transform: none;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0 1rem 1rem;
+  }
+  .filter-group { min-width: 100%; width: 100%; }
+
+  .page-header {
+    padding: 2rem 1rem 1rem;
+  }
+  .page-header h1 { font-size: 1.45rem; }
+
+  .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .admin-stat-card { padding: 1rem; }
+  .admin-stat-card .number { font-size: 1.5rem; }
+
+  .admin-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+  .admin-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.65rem 1rem;
+  }
+
+  .admin-panel {
+    padding: 1rem;
+    margin: 0 -0.25rem;
+  }
+
+  .admin-table {
+    font-size: 0.8rem;
+    min-width: 640px;
+  }
+  .admin-table th,
+  .admin-table td {
+    padding: 0.65rem 0.5rem;
+  }
+
+  .admin-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .admin-actions .btn { flex: 1 1 auto; }
+
+  .admin-modal {
+    padding: 0;
+    align-items: stretch;
+  }
+  .admin-modal-card {
+    max-width: 100%;
+    width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+  }
+  .admin-modal-head,
+  .admin-modal-body {
+    padding: 1rem;
+  }
+  .admin-field-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-detail-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-detail-actions select,
+  .admin-notes-label textarea {
+    min-width: 0;
+    width: 100%;
+  }
+
   .payment-tabs { flex-direction: column; }
   .card-form .form-row { grid-template-columns: 1fr; }
+
+  .success-box,
+  .order-card,
+  .payment-box {
+    padding: 1.25rem 1rem;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+
+  #toast-container {
+    top: auto;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    left: 0.75rem;
+    right: 0.75rem;
+    align-items: stretch;
+  }
+  .toast {
+    min-width: 0;
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  .wa-float {
+    right: max(0.85rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .steps-grid.steps-3 { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
-  .hero { padding: 3rem 1rem 2.5rem; }
-  .hero-content h1 { font-size: 1.75rem; }
-  .section { padding: 2.5rem 1rem; }
-  .section-title { font-size: 1.35rem; }
-  .page-header h1 { font-size: 1.5rem; }
+  .hero { padding-top: 2.5rem; padding-bottom: 2rem; }
+  .hero-content h1 { font-size: 1.6rem; }
+  .brand-mark { font-size: 0.6em; }
+  .section { padding: 2rem 0.85rem; }
+  .section-title { font-size: 1.25rem; margin-bottom: 1.25rem; }
+  .page-header h1 { font-size: 1.35rem; }
   .admin-stats { grid-template-columns: 1fr; }
-  .detail-flag { font-size: 3.5rem; }
-  .detail-price .price { font-size: 2rem; }
+  .detail-flag { font-size: 3rem; }
+  .detail-price .price { font-size: 1.75rem; }
+  .form-section { padding: 1rem; }
+  .visa-card-header,
+  .visa-card-body { padding: 1.1rem; }
+  .job-card { padding: 1rem; }
+  .logo-text { font-size: 1.25rem; }
+}
+
+/* Touch devices: no sticky hover lift */
+@media (hover: none) {
+  .visa-card:hover,
+  .job-card:hover,
+  .admin-stat-card:hover,
+  .btn-primary:hover,
+  .btn-outline:hover,
+  .btn-whatsapp:hover {
+    transform: none;
+  }
+}
+
+/* Prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
