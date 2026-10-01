@@ -10,7 +10,7 @@
 [functions]
   node_bundler = "nft"
   included_files = ["node_modules/sql.js/dist/sql-wasm.wasm", "server/**"]
-  external_node_modules = ["express", "multer", "uuid", "serverless-http", "sql.js", "@netlify/blobs"]
+  external_node_modules = ["express", "multer", "uuid", "serverless-http", "sql.js", "@netlify/blobs", "@libsql/client"]
 
 # API → serverless Express (:splat keeps path after /api/)
 [[redirects]]
