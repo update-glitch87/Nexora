@@ -14,6 +14,27 @@ const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
 const BLOB_KEY = 'visa-store.db';
 const SCHEMA_VERSION = 9;
 
+/** Tables that must NEVER be dropped/truncated by migrations or seed updates */
+const PROTECTED_TABLES = ['orders', 'kyc_verifications'];
+
+function assertSafeSql(sql) {
+  const s = String(sql || '');
+  const upper = s.toUpperCase();
+  for (const table of PROTECTED_TABLES) {
+    const dropRe = new RegExp(`DROP\\s+TABLE\\s+(IF\\s+EXISTS\\s+)?["']?${table}["']?`, 'i');
+    const truncRe = new RegExp(`DELETE\\s+FROM\\s+["']?${table}["']?\\s*;?\\s*$`, 'i');
+    // Block bare DELETE FROM orders / kyc with no WHERE (wipe-all)
+    const wipeRe = new RegExp(`DELETE\\s+FROM\\s+["']?${table}["']?(?!\\s+WHERE)`, 'i');
+    if (dropRe.test(s) || (wipeRe.test(s) && !/\bWHERE\b/i.test(s))) {
+      throw new Error(
+        `[DB SAFETY] Blocked destructive SQL on "${table}". ` +
+        'User applications must never be deleted by updates/migrations.'
+      );
+    }
+  }
+  return s;
+}
+
 function hashPassword(pw) {
   return crypto.createHash('sha256').update(pw).digest('hex');
 }
@@ -125,6 +146,7 @@ function wrapSqlJs(SQL, fileBytes) {
         return rows[0];
       },
       run(...params) {
+        assertSafeSql(sql);
         raw.run(sql, params);
         const idRow = raw.exec('SELECT last_insert_rowid() AS id');
         const lastInsertRowid = idRow[0]?.values?.[0]?.[0] ?? 0;
@@ -137,6 +159,7 @@ function wrapSqlJs(SQL, fileBytes) {
   }
 
   function exec(sql) {
+    assertSafeSql(sql);
     raw.exec(sql);
     persist();
   }
@@ -159,8 +182,12 @@ function columnExists(db, table, column) {
 }
 
 /**
- * Safe migrate: NEVER drop orders / kyc_verifications (user applications).
- * Only create missing tables/columns.
+ * SAFE MIGRATE RULES (do not break):
+ * 1. NEVER DROP TABLE orders / kyc_verifications
+ * 2. NEVER DELETE FROM orders without a specific WHERE (admin single-delete OK)
+ * 3. Only ADD COLUMN / CREATE TABLE IF NOT EXISTS
+ * 4. Seed visas/jobs with INSERT OR IGNORE / insert-if-missing only
+ * User applications must survive every Netlify redeploy and code update.
  */
 function migrateIfNeeded(db) {
   let version = 0;
@@ -169,10 +196,7 @@ function migrateIfNeeded(db) {
     version = row?.user_version ?? 0;
   } catch { /* empty db */ }
 
-  // Ensure base tables exist (idempotent)
-  // createSchema is called after this
-
-  // Additive column upgrades for older DBs (preserve rows)
+  // Additive column upgrades for older DBs (preserve all application rows)
   if (tableExists(db, 'orders')) {
     const addCols = [
       ['current_city', 'TEXT'],
@@ -193,7 +217,7 @@ function migrateIfNeeded(db) {
   }
 
   if (version < SCHEMA_VERSION) {
-    console.log(`[DB] Schema ${version} → ${SCHEMA_VERSION} (orders preserved)`);
+    console.log(`[DB] Schema ${version} → ${SCHEMA_VERSION} (PROTECTED: orders kept)`);
   }
 }
 

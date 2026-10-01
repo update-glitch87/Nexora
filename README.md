@@ -66,7 +66,9 @@ This app is set up for **Netlify**: static `public/` + serverless Express API.
 After deploy, open your `*.netlify.app` URL.
 
 **Notes**
-- KYC uploads still use `/tmp` on Netlify (files can reset). Application **form data** is stored in Netlify Blobs and survives redeploys.
+- Application form data is stored in **Netlify Blobs** and must survive every update/redeploy.
+- Migrations are additive only — `orders` / `kyc_verifications` are protected and cannot be dropped by updates.
+- KYC uploaded files still use `/tmp` on Netlify (file binaries can reset); the application records themselves stay.
 - Local still works with `npm start` (Express on port 3000).
 
 ### CLI deploy (optional)
