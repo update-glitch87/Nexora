@@ -1150,7 +1150,7 @@ async function loadAdminJobs() {
         <div class="form-row">
           <div class="form-group"><label>City *</label><input id="nj-city" required></div>
           <div class="form-group"><label>Category *</label>
-            <select id="nj-cat"><option>IT</option><option>Engineering</option><option>Healthcare</option><option>Hospitality</option><option>Sales</option><option>Logistics</option><option>Product</option></select>
+            <select id="nj-cat"><option>IT</option><option>Engineering</option><option>Healthcare</option><option>Hospitality</option><option>Driving</option><option>Care</option><option>Reception</option><option>Labour</option><option>Sales</option><option>Logistics</option><option>Product</option></select>
           </div>
         </div>
         <div class="form-row">
