@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: visago-nexora
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        generateValue: true
+      - key: HOST
+        value: 0.0.0.0

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisaGo — Professional Visa Assessment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <nav class="navbar" id="navbar">
+      <div class="nav-container">
+        <a href="#" class="nav-logo" onclick="showView('home')">
+          <span class="logo-icon">✈️</span>
+          <span class="logo-text">VisaGo</span>
+        </a>
+        <button class="nav-toggle" id="navToggle" onclick="toggleNav()">☰</button>
+        <div class="nav-links" id="navLinks">
+          <a href="#" onclick="showView('home')" class="nav-link">Home</a>
+          <a href="#" onclick="showView('visas')" class="nav-link">Choose Visa</a>
+          <a href="#" onclick="showView('track')" class="nav-link">Track</a>
+          <a href="#" onclick="showView('admin')" class="nav-link">Admin</a>
+        </div>
+      </div>
+    </nav>
+
+    <main id="main-content">
+      <section id="view-home" class="view active">
+        <div class="hero">
+          <div class="hero-content">
+            <h1><span class="brand-mark">VisaGo</span> Professional Visa Assessment</h1>
+            <p>Canada, Germany, UK, Europe, Australia, USA &amp; UAE — select a pathway, submit short details, track &amp; KYC after approval.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary btn-lg" onclick="showView('visas')">Select a Visa</button>
+              <button class="btn btn-outline btn-lg" onclick="showView('track')">Track Application</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section-title">Popular Destinations</h2>
+          <p class="section-sub">Tap a card to begin your assessment</p>
+          <div class="visa-grid" id="popular-visas"></div>
+        </div>
+
+        <div class="section section-alt">
+          <h2 class="section-title">Assessment Steps</h2>
+          <div class="steps-grid steps-3">
+            <div class="step-card">
+              <div class="step-number">1</div>
+              <h3>Select Visa</h3>
+              <p>Choose country and visa type from the cards.</p>
+            </div>
+            <div class="step-card">
+              <div class="step-number">2</div>
+              <h3>Stay &amp; Work</h3>
+              <p>Duration, purpose, job / occupation details.</p>
+            </div>
+            <div class="step-card">
+              <div class="step-number">3</div>
+              <h3>Get Reviewed</h3>
+              <p>We review your file. KYC opens after approval.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-visas" class="view">
+        <div class="page-header">
+          <h1>Choose Your Visa</h1>
+          <p>Tap a card to start</p>
+        </div>
+        <div class="filters">
+          <div class="filter-group">
+            <input type="text" id="search-input" class="search-input" placeholder="Search country..." oninput="filterVisas()">
+          </div>
+          <div class="filter-group">
+            <select id="filter-category" class="filter-select" onchange="filterVisas()">
+              <option value="">All Types</option>
+              <option value="work">Work / PR</option>
+              <option value="tourist">Tourist</option>
+              <option value="student">Student</option>
+              <option value="business">Business</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="filter-country" class="filter-select" onchange="filterVisas()">
+              <option value="">All Countries</option>
+            </select>
+          </div>
+        </div>
+        <div class="visa-grid" id="all-visas"></div>
+      </section>
+
+      <section id="view-detail" class="view">
+        <button class="btn btn-back" onclick="showView('visas')">← Back</button>
+        <div id="visa-detail-content"></div>
+      </section>
+
+      <!-- SINGLE PAGE SHORT ASSESSMENT -->
+      <section id="view-apply" class="view">
+        <div class="page-header">
+          <h1>Quick Assessment</h1>
+          <p id="apply-visa-label">Short details — one page only</p>
+        </div>
+
+        <div class="form-container">
+          <form id="apply-form" onsubmit="submitApplication(event)">
+            <div class="form-section">
+              <h3>Your Details</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Full Name *</label>
+                  <input type="text" name="applicant_name" required placeholder="Full legal name">
+                </div>
+                <div class="form-group">
+                  <label>Email *</label>
+                  <input type="email" name="applicant_email" required placeholder="you@email.com">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Phone *</label>
+                  <input type="tel" name="applicant_phone" required placeholder="+91 98765 43210">
+                </div>
+                <div class="form-group">
+                  <label>Nationality *</label>
+                  <input type="text" name="nationality" required placeholder="e.g. India, Nepal, Bangladesh">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Date of Birth *</label>
+                  <input type="date" name="date_of_birth" required>
+                </div>
+                <div class="form-group">
+                  <label>Passport Number *</label>
+                  <input type="text" name="passport_number" required placeholder="A12345678">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>ID Type *</label>
+                  <select name="id_type" required onchange="updateIdLabel()">
+                    <option value="">Select</option>
+                    <option value="aadhaar">Aadhaar Card</option>
+                    <option value="passport">Passport</option>
+                    <option value="national_id">National ID</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label id="id-number-label">ID / Aadhaar Number *</label>
+                  <input type="text" name="id_number" required placeholder="Enter ID number">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Stay &amp; Work</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Visa Duration *</label>
+                  <select name="visa_duration" required>
+                    <option value="">Select</option>
+                    <option value="90">90 days</option>
+                    <option value="180">6 months</option>
+                    <option value="365">1 year</option>
+                    <option value="730">2 years</option>
+                    <option value="1095">3+ years / PR track</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Purpose *</label>
+                  <select name="purpose" required>
+                    <option value="">Select</option>
+                    <option value="work">Work / Job</option>
+                    <option value="study">Study</option>
+                    <option value="pr">PR / Immigration</option>
+                    <option value="family">Family Visit</option>
+                    <option value="tourism">Tourism</option>
+                    <option value="business">Business</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Job / Occupation *</label>
+                  <input type="text" name="occupation" required placeholder="e.g. Software Engineer">
+                </div>
+                <div class="form-group">
+                  <label>Work Experience *</label>
+                  <select name="work_experience" required>
+                    <option value="">Select</option>
+                    <option value="0">None / Fresh</option>
+                    <option value="1-2">1–2 years</option>
+                    <option value="3-5">3–5 years</option>
+                    <option value="5-10">5–10 years</option>
+                    <option value="10+">10+ years</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Education *</label>
+                  <select name="education" required>
+                    <option value="">Select</option>
+                    <option value="diploma">Diploma</option>
+                    <option value="bachelor">Bachelor's</option>
+                    <option value="master">Master's / PhD</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Travel Date *</label>
+                  <input type="date" name="travel_date" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Net Worth (USD) *</label>
+                  <select name="net_worth" required>
+                    <option value="">Select</option>
+                    <option value="under_10k">Under $10k</option>
+                    <option value="10k_50k">$10k – $50k</option>
+                    <option value="50k_100k">$50k – $100k</option>
+                    <option value="100k_plus">$100k+</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Annual Income (USD) *</label>
+                  <select name="annual_income" required>
+                    <option value="">Select</option>
+                    <option value="under_15k">Under $15k</option>
+                    <option value="15k_30k">$15k – $30k</option>
+                    <option value="30k_60k">$30k – $60k</option>
+                    <option value="60k_plus">$60k+</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden defaults for server -->
+            <input type="hidden" name="residence" value="India">
+            <input type="hidden" name="employment_status" value="employed">
+            <input type="hidden" name="language" value="fluent">
+            <input type="hidden" name="trip_funds" value="5k_10k">
+            <input type="hidden" name="notes" value="">
+
+            <div class="form-section">
+              <div class="order-summary" id="order-summary"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-full">Submit Assessment</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="view-track" class="view">
+        <div class="page-header">
+          <h1>Track Application</h1>
+          <p>Enter your reference ID</p>
+        </div>
+        <div class="form-container">
+          <div class="form-group">
+            <label>Reference ID</label>
+            <div class="track-input-group">
+              <input type="text" id="track-order-id" placeholder="VSA-..." class="search-input">
+              <button class="btn btn-primary" onclick="trackOrder()">Track</button>
+            </div>
+          </div>
+          <div id="track-result"></div>
+        </div>
+      </section>
+
+      <!-- KYC FEE PAYMENT -->
+      <section id="view-payment" class="view">
+        <div class="page-header">
+          <h1>KYC Verification Fee</h1>
+          <p>Pay with card to unlock document upload</p>
+        </div>
+        <div class="form-container">
+          <button type="button" class="btn btn-back" onclick="showView('track')">← Back to Track</button>
+          <div id="payment-content"></div>
+        </div>
+      </section>
+
+      <!-- KYC UPLOAD -->
+      <section id="view-kyc" class="view">
+        <div class="page-header">
+          <h1>KYC Documents</h1>
+          <p>Upload ID and selfie for verification</p>
+        </div>
+        <div class="form-container">
+          <button type="button" class="btn btn-back" onclick="showView('track')">← Back to Track</button>
+          <form id="kyc-form" onsubmit="submitKYC(event)">
+            <div class="form-section">
+              <h3>Identity</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Full Name (as on ID) *</label>
+                  <input type="text" name="full_name" required>
+                </div>
+                <div class="form-group">
+                  <label>Date of Birth *</label>
+                  <input type="date" name="date_of_birth" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nationality *</label>
+                  <input type="text" name="nationality" required placeholder="e.g. India, Nepal, Bangladesh">
+                </div>
+                <div class="form-group">
+                  <label>ID Type *</label>
+                  <select name="id_type" required>
+                    <option value="">Select</option>
+                    <option value="aadhaar">Aadhaar Card</option>
+                    <option value="passport">Passport</option>
+                    <option value="national_id">National ID</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>ID / Aadhaar Number *</label>
+                <input type="text" name="id_number" required>
+              </div>
+            </div>
+            <div class="form-section">
+              <h3>Uploads</h3>
+              <div class="form-group">
+                <label>ID Document (JPG, PNG, PDF) *</label>
+                <div class="file-upload">
+                  <input type="file" name="id_document" accept=".jpg,.jpeg,.png,.pdf" required onchange="previewFile(this, 'id-preview')">
+                  <div class="file-upload-label"><span class="upload-icon">📄</span><span>Upload ID document</span></div>
+                  <div class="file-preview" id="id-preview"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Selfie (JPG or PNG) *</label>
+                <div class="file-upload">
+                  <input type="file" name="selfie" accept=".jpg,.jpeg,.png" required onchange="previewFile(this, 'selfie-preview')">
+                  <div class="file-upload-label"><span class="upload-icon">🤳</span><span>Upload selfie</span></div>
+                  <div class="file-preview" id="selfie-preview"></div>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-full">Submit KYC</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="view-admin" class="view">
+        <div class="page-header">
+          <h1>Admin</h1>
+          <p>Review assessments</p>
+        </div>
+        <div id="admin-content">
+          <div class="admin-login" id="admin-login">
+            <form onsubmit="adminLogin(event)">
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="admin-username" required>
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="admin-password" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Login</button>
+            </form>
+          </div>
+          <div id="admin-dashboard" style="display:none;">
+            <div class="admin-stats" id="admin-stats"></div>
+            <div class="admin-tabs">
+              <button class="admin-tab active" onclick="showAdminTab('orders', this)">Applications</button>
+              <button class="admin-tab" onclick="showAdminTab('visas', this)">Visas</button>
+              <button class="admin-tab" onclick="logoutAdmin()">Logout</button>
+            </div>
+            <div id="admin-orders" class="admin-panel"></div>
+            <div id="admin-visas" class="admin-panel" style="display:none;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-success" class="view">
+        <div class="success-container">
+          <div class="success-icon">✅</div>
+          <h1>Assessment Submitted</h1>
+          <p>Our team will review your profile and contact you by email.</p>
+          <div class="success-details" id="success-details"></div>
+          <div class="hero-actions">
+            <button class="btn btn-primary" onclick="openTrackFromRef(document.getElementById('success-ref-id')?.textContent?.trim() || localStorage.getItem('visago_last_ref'))">Track Application</button>
+            <button class="btn btn-outline" onclick="copyTrackingId()">Copy Tracking ID</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h4>VisaGo</h4>
+          <p>Professional visa assessment for 20+ countries.</p>
+        </div>
+        <div class="footer-section">
+          <h4>Links</h4>
+          <a href="#" onclick="showView('visas')">Choose Visa</a>
+          <a href="#" onclick="showView('track')">Track</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 VisaGo. Free confidential assessment.</p>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>
