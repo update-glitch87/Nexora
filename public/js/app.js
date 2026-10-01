@@ -95,6 +95,25 @@ function escapeJs(str) {
     .replace(/\r?\n/g, ' ');
 }
 
+/** Open WhatsApp outside the webview/APK (native WhatsApp via wa.me) */
+function openWhatsApp(phone, event) {
+  if (event) event.preventDefault();
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return false;
+  const msg = encodeURIComponent('Hi NexoraGo, I need help with jobs / visa.');
+  const url = `https://wa.me/${digits}?text=${msg}`;
+  // Opens outside the site / WebView into WhatsApp when installed
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) window.location.href = url;
+  return false;
+}
+
+function toggleWaFloat() {
+  const menu = document.getElementById('wa-float-menu');
+  if (!menu) return;
+  menu.hidden = !menu.hidden;
+}
+
 async function loadPopularVisas() {
   try {
     const visas = await api('/api/visas?popular=1');

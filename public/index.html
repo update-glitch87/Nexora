@@ -40,6 +40,13 @@
               <button class="btn btn-outline btn-lg" onclick="showView('visas')">Choose Visa</button>
               <button class="btn btn-outline btn-lg" onclick="showView('track')">Track</button>
             </div>
+            <div class="hero-whatsapp">
+              <span class="wa-label">Fast WhatsApp contact</span>
+              <div class="wa-btns">
+                <a class="btn btn-whatsapp" href="https://wa.me/639551846032" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+639551846032', event)">WhatsApp +63 955 184 6032</a>
+                <a class="btn btn-whatsapp" href="https://wa.me/15014618298" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+15014618298', event)">WhatsApp +1 501 461 8298</a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -495,11 +502,28 @@
           <a href="#" onclick="showView('visas')">Visas</a>
           <a href="#" onclick="showView('track')">Track</a>
         </div>
+        <div class="footer-section">
+          <h4>WhatsApp</h4>
+          <a href="https://wa.me/639551846032" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+639551846032', event)">+63 955 184 6032</a>
+          <a href="https://wa.me/15014618298" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+15014618298', event)">+1 501 461 8298</a>
+        </div>
       </div>
       <div class="footer-bottom">
         <p>&copy; 2026 NexoraGo. Jobs &amp; visa agency.</p>
       </div>
     </footer>
+  </div>
+
+  <!-- Floating WhatsApp — opens outside app/browser into WhatsApp -->
+  <div class="wa-float" aria-label="WhatsApp contact">
+    <button type="button" class="wa-float-toggle" onclick="toggleWaFloat()" title="WhatsApp">
+      <span class="wa-icon">💬</span>
+      <span class="wa-float-text">Chat</span>
+    </button>
+    <div id="wa-float-menu" class="wa-float-menu" hidden>
+      <a href="https://wa.me/639551846032" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+639551846032', event)">+63 955 184 6032</a>
+      <a href="https://wa.me/15014618298" target="_blank" rel="noopener noreferrer" onclick="return openWhatsApp('+15014618298', event)">+1 501 461 8298</a>
+    </div>
   </div>
 
   <div id="toast-container"></div>

@@ -276,6 +276,114 @@ a:hover { text-decoration: none; }
   flex-wrap: wrap;
 }
 
+.hero-whatsapp {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  position: relative;
+  z-index: 1;
+}
+
+.wa-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.wa-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.btn-whatsapp {
+  background: #128C7E;
+  color: #fff !important;
+  border: none;
+  box-shadow: 0 4px 16px rgba(18, 140, 126, 0.35);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.btn-whatsapp:hover {
+  background: #075E54;
+  transform: translateY(-2px);
+  color: #fff !important;
+}
+
+.wa-float {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.25rem;
+  z-index: 1800;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 0.55rem;
+}
+
+.wa-float-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #25D366;
+  color: #0b1a12;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.15rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(37, 211, 102, 0.45);
+}
+
+.wa-float-toggle:hover { filter: brightness(1.05); }
+
+.wa-icon { font-size: 1.15rem; line-height: 1; }
+
+.wa-float-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 210px;
+  padding: 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+}
+
+.wa-float-menu[hidden] { display: none !important; }
+
+.wa-float-menu a {
+  display: block;
+  text-align: center;
+  background: #128C7E;
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+}
+
+.wa-float-menu a:hover { background: #075E54; }
+
+@media (max-width: 560px) {
+  .wa-float-text { display: none; }
+  .wa-float-toggle { padding: 0.95rem; border-radius: 50%; }
+}
+
 .hero-stats {
   display: flex;
   gap: 1.5rem;
