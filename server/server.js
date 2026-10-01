@@ -46,11 +46,49 @@ const upload = multer({
 
 const hashPassword = (pw) => crypto.createHash('sha256').update(pw).digest('hex');
 
+/** Signed admin sessions — survive Netlify cold starts (DB sessions were wiped every restart). */
+const ADMIN_SESSION_DAYS = Number(process.env.ADMIN_SESSION_DAYS || 30);
+const ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET
+  || process.env.TURSO_AUTH_TOKEN
+  || process.env.ADMIN_PASS
+  || 'nexorago-admin-session-v1';
+
 function createSession(username) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
-  db.prepare('INSERT INTO admin_sessions (token, username, expires_at) VALUES (?, ?, ?)').run(token, username, expires);
+  const exp = Date.now() + ADMIN_SESSION_DAYS * 24 * 60 * 60 * 1000;
+  const payload = `${username}.${exp}`;
+  const sig = crypto.createHmac('sha256', ADMIN_SESSION_SECRET).update(payload).digest('hex');
+  const token = Buffer.from(`${payload}.${sig}`).toString('base64url');
+
+  // Best-effort local record (may be lost on cold start — token itself remains valid)
+  try {
+    const expires = new Date(exp).toISOString();
+    db.prepare(
+      'INSERT OR REPLACE INTO admin_sessions (token, username, expires_at) VALUES (?, ?, ?)'
+    ).run(token.slice(0, 64), username, expires);
+  } catch { /* ignore */ }
+
   return token;
+}
+
+function verifyAdminToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const raw = Buffer.from(token, 'base64url').toString('utf8');
+    const parts = raw.split('.');
+    if (parts.length !== 3) return null;
+    const [username, expStr, sig] = parts;
+    const exp = Number(expStr);
+    if (!username || !Number.isFinite(exp) || exp < Date.now()) return null;
+    const expected = crypto.createHmac('sha256', ADMIN_SESSION_SECRET)
+      .update(`${username}.${exp}`)
+      .digest('hex');
+    const a = Buffer.from(String(sig));
+    const b = Buffer.from(String(expected));
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    return { username, exp };
+  } catch {
+    return null;
+  }
 }
 
 function requireAdmin(req, res, next) {
@@ -58,11 +96,10 @@ function requireAdmin(req, res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : req.headers['x-admin-token'];
   if (!token) return res.status(401).json({ error: 'Admin login required' });
 
-  const session = db.prepare(`
-    SELECT * FROM admin_sessions WHERE token = ? AND datetime(expires_at) > datetime('now')
-  `).get(token);
-
-  if (!session) return res.status(401).json({ error: 'Session expired. Please log in again.' });
+  const session = verifyAdminToken(token);
+  if (!session) {
+    return res.status(401).json({ error: 'Session expired. Please log in again.' });
+  }
   req.adminUser = session.username;
   next();
 }
@@ -507,13 +544,16 @@ app.post('/api/admin/login', (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
   const token = createSession(user.username);
-  res.json({ success: true, username: user.username, token });
+  res.json({
+    success: true,
+    username: user.username,
+    token,
+    expires_in_days: ADMIN_SESSION_DAYS,
+  });
 });
 
-app.post('/api/admin/logout', requireAdmin, (req, res) => {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : req.headers['x-admin-token'];
-  if (token) db.prepare('DELETE FROM admin_sessions WHERE token = ?').run(token);
+app.post('/api/admin/logout', (req, res) => {
+  // Signed tokens are cleared on the client; no server DB needed
   res.json({ success: true });
 });
 
