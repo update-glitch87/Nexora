@@ -89,7 +89,17 @@ function kycFeeFor(visa, order = {}) {
 // ── Public API ──
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'NexoraGo', time: new Date().toISOString() });
+  let applications = 0;
+  try {
+    applications = Number(db.prepare('SELECT COUNT(*) as c FROM orders').get()?.c || 0);
+  } catch { /* ignore */ }
+  res.json({
+    ok: true,
+    service: 'NexoraGo',
+    applications,
+    persistence: (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) ? 'netlify-blobs' : 'local-disk',
+    time: new Date().toISOString(),
+  });
 });
 
 app.get('/api/cities', (req, res) => {
@@ -163,7 +173,7 @@ app.get('/api/countries', (req, res) => {
   res.json(rows);
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const {
     visa_id, applicant_name, applicant_email, applicant_phone,
     passport_number, travel_date, nationality, age, date_of_birth, residence,
@@ -229,6 +239,11 @@ app.post('/api/orders', (req, res) => {
     id_type, id_number, net_worth, annual_income, trip_funds, notes || '',
     kycFee
   );
+
+  // Wait until durable storage write finishes (critical on Netlify)
+  if (typeof db.flushPersist === 'function') {
+    await db.flushPersist();
+  }
 
   res.status(201).json({
     order_id: orderNumber,
@@ -526,7 +541,7 @@ app.get('/api/admin/orders/:id', requireAdmin, (req, res) => {
   res.json({ ...order, kyc_submissions: kyc });
 });
 
-app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
+app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   const {
     order_status, kyc_status, kyc_notes, payment_status, notes,
   } = req.body || {};
@@ -565,10 +580,11 @@ app.patch('/api/admin/orders/:id', requireAdmin, (req, res) => {
     FROM orders o JOIN visas v ON o.visa_id = v.id WHERE o.id = ?
   `).get(orderId);
 
+  if (typeof db.flushPersist === 'function') await db.flushPersist();
   res.json({ message: 'Order updated', order: updated });
 });
 
-app.delete('/api/admin/orders/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
   const orderId = req.params.id;
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
   if (!order) return res.status(404).json({ error: 'Order not found' });
@@ -590,6 +606,7 @@ app.delete('/api/admin/orders/:id', requireAdmin, (req, res) => {
     try { if (fs.existsSync(fp)) fs.unlinkSync(fp); } catch { /* ignore */ }
   }
 
+  if (typeof db.flushPersist === 'function') await db.flushPersist();
   res.json({ message: 'Application deleted', id: orderId });
 });
 

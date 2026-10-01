@@ -3,13 +3,15 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY_BLOBS_CONTEXT);
 const DATA_DIR = process.env.DATA_DIR
-  || ((process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME)
+  || (IS_NETLIFY
     ? path.join('/tmp', 'nexorago-data')
     : path.join(__dirname, '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'visa-store.db');
+const BLOB_KEY = 'visa-store.db';
 const SCHEMA_VERSION = 9;
 
 function hashPassword(pw) {
@@ -27,6 +29,71 @@ function resolveWasm() {
   throw new Error('sql.js wasm not found — run npm install');
 }
 
+function getBlobStore() {
+  if (!IS_NETLIFY) return null;
+  try {
+    const { getStore } = require('@netlify/blobs');
+    return getStore({ name: 'nexorago-data', consistency: 'strong' });
+  } catch (err) {
+    console.error('[DB] Netlify Blobs unavailable:', err.message);
+    return null;
+  }
+}
+
+async function loadPersistentBytes() {
+  // Prefer durable Netlify Blobs (survives redeploys + cold starts)
+  const store = getBlobStore();
+  if (store) {
+    try {
+      const buf = await store.get(BLOB_KEY, { type: 'arrayBuffer' });
+      if (buf && buf.byteLength) {
+        console.log(`[DB] Loaded ${buf.byteLength} bytes from Netlify Blobs`);
+        return new Uint8Array(buf);
+      }
+    } catch (err) {
+      console.error('[DB] Blob load failed:', err.message);
+    }
+  }
+
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      return new Uint8Array(fs.readFileSync(DB_PATH));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+let _persistChain = Promise.resolve();
+
+async function savePersistentBytes(bytes) {
+  try {
+    fs.writeFileSync(DB_PATH, Buffer.from(bytes));
+  } catch (err) {
+    console.error('[DB] local persist failed:', err.message);
+  }
+
+  const store = getBlobStore();
+  if (!store) return;
+  try {
+    await store.set(BLOB_KEY, bytes);
+  } catch (err) {
+    console.error('[DB] Blob save failed:', err.message);
+  }
+}
+
+function queuePersist(bytes) {
+  _persistChain = _persistChain
+    .then(() => savePersistentBytes(bytes))
+    .catch((err) => console.error('[DB] persist queue error:', err.message));
+  return _persistChain;
+}
+
+async function flushPersist() {
+  await _persistChain;
+}
+
 /** Wrap sql.js so call sites can keep using DatabaseSync-style prepare().get/all/run */
 function wrapSqlJs(SQL, fileBytes) {
   const raw = fileBytes ? new SQL.Database(fileBytes) : new SQL.Database();
@@ -34,7 +101,7 @@ function wrapSqlJs(SQL, fileBytes) {
   function persist() {
     try {
       const data = raw.export();
-      fs.writeFileSync(DB_PATH, Buffer.from(data));
+      queuePersist(data);
     } catch (err) {
       console.error('[DB] persist failed:', err.message);
     }
@@ -74,9 +141,27 @@ function wrapSqlJs(SQL, fileBytes) {
     persist();
   }
 
-  return { prepare, exec, _raw: raw, _persist: persist };
+  return { prepare, exec, _raw: raw, _persist: persist, flushPersist };
 }
 
+function tableExists(db, name) {
+  const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name = ?`).get(name);
+  return !!row;
+}
+
+function columnExists(db, table, column) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    return cols.some((c) => c.name === column);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safe migrate: NEVER drop orders / kyc_verifications (user applications).
+ * Only create missing tables/columns.
+ */
 function migrateIfNeeded(db) {
   let version = 0;
   try {
@@ -84,16 +169,32 @@ function migrateIfNeeded(db) {
     version = row?.user_version ?? 0;
   } catch { /* empty db */ }
 
-  if (version >= SCHEMA_VERSION) return;
+  // Ensure base tables exist (idempotent)
+  // createSchema is called after this
 
-  db.exec(`
-    DROP TABLE IF EXISTS kyc_verifications;
-    DROP TABLE IF EXISTS orders;
-    DROP TABLE IF EXISTS jobs;
-    DROP TABLE IF EXISTS admin_sessions;
-    DROP TABLE IF EXISTS visas;
-    DROP TABLE IF EXISTS admin_users;
-  `);
+  // Additive column upgrades for older DBs (preserve rows)
+  if (tableExists(db, 'orders')) {
+    const addCols = [
+      ['current_city', 'TEXT'],
+      ['preferred_city', 'TEXT'],
+      ['job_id', 'INTEGER'],
+      ['target_job', 'TEXT'],
+    ];
+    for (const [col, typ] of addCols) {
+      if (!columnExists(db, 'orders', col)) {
+        try {
+          db.exec(`ALTER TABLE orders ADD COLUMN ${col} ${typ}`);
+          console.log(`[DB] Added orders.${col}`);
+        } catch (err) {
+          console.error(`[DB] ALTER orders.${col} failed:`, err.message);
+        }
+      }
+    }
+  }
+
+  if (version < SCHEMA_VERSION) {
+    console.log(`[DB] Schema ${version} → ${SCHEMA_VERSION} (orders preserved)`);
+  }
 }
 
 function createSchema(db) {
@@ -355,14 +456,15 @@ function seed(db) {
     insertVisa.run(v.code, v.name, v.flag, v.type, v.category, v.price, v.processing, v.validity, v.entries, JSON.stringify(v.reqs), v.desc, v.popular);
   }
 
-  // Seed jobs once (schema bump recreates empty table)
-  const jobCount = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
-  if (!jobCount) {
-    const insertJob = db.prepare(`
-      INSERT INTO jobs (title, company, country_code, country_name, city, category, salary_range, visa_support, description, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1)
-    `);
-    for (const j of JOB_DATA) {
+  // Add any missing seeded jobs without wiping admin-created ones
+  const insertJob = db.prepare(`
+    INSERT INTO jobs (title, company, country_code, country_name, city, category, salary_range, visa_support, description, active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1)
+  `);
+  const findJob = db.prepare('SELECT id FROM jobs WHERE title = ? AND company = ? AND city = ?');
+  for (const j of JOB_DATA) {
+    const exists = findJob.get(j.title, j.company, j.city);
+    if (!exists) {
       insertJob.run(j.title, j.company, j.code, j.name, j.city, j.category, j.salary, j.desc);
     }
   }
@@ -375,8 +477,10 @@ function seed(db) {
 
   const count = db.prepare('SELECT COUNT(*) as c FROM visas').get().c;
   const jobs = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
-  console.log(`[DB] Seeded ${count} visa products, ${jobs} jobs (sql.js)`);
+  const orders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
+  console.log(`[DB] Seeded ${count} visas, ${jobs} jobs | applications stored: ${orders}`);
   console.log(`[DB] Admin login: ${adminUser} / (set ADMIN_PASS to change)`);
+  console.log(`[DB] Persistence: ${IS_NETLIFY ? 'Netlify Blobs + /tmp' : 'local disk'}`);
 }
 
 
@@ -391,19 +495,13 @@ async function initDb() {
     const wasmBinary = resolveWasm();
     const SQL = await initSqlJs({ wasmBinary });
 
-    let fileBytes = null;
-    if (fs.existsSync(DB_PATH)) {
-      try {
-        fileBytes = new Uint8Array(fs.readFileSync(DB_PATH));
-      } catch {
-        fileBytes = null;
-      }
-    }
-
+    const fileBytes = await loadPersistentBytes();
     const db = wrapSqlJs(SQL, fileBytes);
     migrateIfNeeded(db);
     createSchema(db);
     seed(db);
+    // Ensure initial seed is flushed to Blobs
+    await db.flushPersist();
     _db = db;
     return _db;
   })();
@@ -425,6 +523,7 @@ const dbProxy = new Proxy({}, {
   get(_t, prop) {
     if (prop === 'initDb') return initDb;
     if (prop === 'getDb') return getDb;
+    if (prop === 'flushPersist') return () => (_db ? _db.flushPersist() : Promise.resolve());
     return getDb()[prop];
   },
 });
@@ -432,3 +531,4 @@ const dbProxy = new Proxy({}, {
 module.exports = dbProxy;
 module.exports.initDb = initDb;
 module.exports.getDb = getDb;
+module.exports.flushPersist = () => (_db ? _db.flushPersist() : Promise.resolve());

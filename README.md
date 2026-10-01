@@ -8,7 +8,7 @@ Professional visa assessment platform: choose a destination, submit a short form
 - One-page short assessment form (no prices in the user flow)
 - Tracking ID with copy + Track page
 - Admin approve unlocks KYC; dummy card fee ($1 / $10 / $100) then document upload
-- SQLite storage via `sql.js` (works locally and on Netlify Functions)
+- SQLite via `sql.js` — on Netlify, applications are saved to **Netlify Blobs** (durable across redeploys)
 
 ## Requirements
 
@@ -66,7 +66,7 @@ This app is set up for **Netlify**: static `public/` + serverless Express API.
 After deploy, open your `*.netlify.app` URL.
 
 **Notes**
-- KYC uploads & SQLite live in `/tmp` on Netlify (ephemeral — data can reset on cold starts). Fine for demo; use a real DB later for production.
+- KYC uploads still use `/tmp` on Netlify (files can reset). Application **form data** is stored in Netlify Blobs and survives redeploys.
 - Local still works with `npm start` (Express on port 3000).
 
 ### CLI deploy (optional)
