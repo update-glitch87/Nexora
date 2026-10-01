@@ -19,9 +19,14 @@
   status = 200
   force = true
 
-# SPA routes (Track deep links)
+# SPA routes (Track + hidden admin gate)
 [[redirects]]
   from = "/track"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin82832783"
   to = "/index.html"
   status = 200
 

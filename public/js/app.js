@@ -3,8 +3,26 @@ let currentVisa = null;
 let currentOrder = null;
 let formStep = 1;
 let adminToken = localStorage.getItem('nexorago_admin_token') || null;
+const ADMIN_SECRET_PATH = '/admin82832783';
+let adminGateOk = sessionStorage.getItem('nexorago_admin_gate') === '1';
+
+function isAdminSecretPath() {
+  const path = (window.location.pathname || '').replace(/\/+$/, '') || '/';
+  return path === ADMIN_SECRET_PATH || path.endsWith(ADMIN_SECRET_PATH);
+}
+
+function unlockAdminGate() {
+  adminGateOk = true;
+  sessionStorage.setItem('nexorago_admin_gate', '1');
+}
 
 function showView(viewName) {
+  if (viewName === 'admin' && !adminGateOk && !isAdminSecretPath()) {
+    showToast('Admin is not available here', 'error');
+    return;
+  }
+  if (viewName === 'admin') unlockAdminGate();
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const view = document.getElementById(`view-${viewName}`);
   if (view) view.classList.add('active');
@@ -1283,6 +1301,12 @@ function refreshCardEffects() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (isAdminSecretPath()) {
+    unlockAdminGate();
+    showView('admin');
+    return;
+  }
+
   const ref = getRefFromUrl();
   if (ref) {
     openTrackFromRef(ref);
