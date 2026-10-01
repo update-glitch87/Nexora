@@ -1011,14 +1011,18 @@ async function openAdminOrder(orderId) {
       ${kycBlocks}
     `;
 
-    modal.style.display = 'flex';
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
   } catch (e) { /* handled */ }
 }
 
 function closeAdminOrder() {
   const modal = document.getElementById('admin-order-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
   document.body.style.overflow = '';
 }
 
