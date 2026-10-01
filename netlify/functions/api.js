@@ -1,3 +1,4 @@
+const { connectLambda } = require('@netlify/blobs');
 const serverless = require('serverless-http');
 const app = require('../../server/server');
 
@@ -18,6 +19,14 @@ function ensureReady() {
 
 // Netlify rewrite /api/* → function with :splat (drops /api). Restore it for Express.
 exports.handler = async (event, context) => {
+  // REQUIRED for Netlify Blobs in Lambda-compat mode (serverless-http).
+  // Without this, application saves look fine but data is NOT persisted.
+  try {
+    connectLambda(event);
+  } catch (err) {
+    console.error('[api] connectLambda failed:', err.message);
+  }
+
   try {
     await ensureReady();
   } catch (err) {

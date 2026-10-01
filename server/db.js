@@ -54,6 +54,7 @@ function getBlobStore() {
   if (!IS_NETLIFY) return null;
   try {
     const { getStore } = require('@netlify/blobs');
+    // After connectLambda(event) in the function handler, this uses site credentials.
     return getStore({ name: 'nexorago-data', consistency: 'strong' });
   } catch (err) {
     console.error('[DB] Netlify Blobs unavailable:', err.message);
@@ -62,7 +63,6 @@ function getBlobStore() {
 }
 
 async function loadPersistentBytes() {
-  // Prefer durable Netlify Blobs (survives redeploys + cold starts)
   const store = getBlobStore();
   if (store) {
     try {
@@ -71,9 +71,12 @@ async function loadPersistentBytes() {
         console.log(`[DB] Loaded ${buf.byteLength} bytes from Netlify Blobs`);
         return new Uint8Array(buf);
       }
+      console.log('[DB] Netlify Blobs store empty (no saved applications yet)');
     } catch (err) {
       console.error('[DB] Blob load failed:', err.message);
     }
+  } else if (IS_NETLIFY) {
+    console.error('[DB] WARNING: Blobs store null — applications may not persist');
   }
 
   if (fs.existsSync(DB_PATH)) {
@@ -96,9 +99,13 @@ async function savePersistentBytes(bytes) {
   }
 
   const store = getBlobStore();
-  if (!store) return;
+  if (!store) {
+    if (IS_NETLIFY) console.error('[DB] WARNING: could not save applications to Blobs');
+    return;
+  }
   try {
     await store.set(BLOB_KEY, bytes);
+    console.log(`[DB] Saved ${bytes.byteLength || bytes.length} bytes to Netlify Blobs`);
   } catch (err) {
     console.error('[DB] Blob save failed:', err.message);
   }
