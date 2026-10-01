@@ -1,4 +1,4 @@
-# VisaGo (Nexora)
+# NexoraGo
 
 Professional visa assessment platform: choose a destination, submit a short form, track by reference ID, and complete KYC after admin approval.
 
@@ -26,7 +26,7 @@ Open http://localhost:3000
 ### Admin
 
 - Username: `admin`
-- Password: `VisaGo2026!` (override with `ADMIN_PASS`)
+- Password: `NexoraGo2026!` (override with `ADMIN_PASS`)
 
 Optional env:
 

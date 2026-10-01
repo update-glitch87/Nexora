@@ -1,7 +1,7 @@
 {
   "name": "visago-nexora",
   "version": "1.2.0",
-  "description": "VisaGo / Nexora — professional visa assessment, tracking, and KYC",
+  "description": "NexoraGo — professional visa assessment, tracking, and KYC",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",

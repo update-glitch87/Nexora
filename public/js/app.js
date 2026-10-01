@@ -2,7 +2,7 @@
 let currentVisa = null;
 let currentOrder = null;
 let formStep = 1;
-let adminToken = localStorage.getItem('visago_admin_token') || null;
+let adminToken = localStorage.getItem('nexorago_admin_token') || null;
 
 function showView(viewName) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -50,7 +50,7 @@ async function api(url, options = {}) {
     if (!res.ok) {
       if (res.status === 401 && url.includes('/api/admin/') && !url.includes('/login')) {
         adminToken = null;
-        localStorage.removeItem('visago_admin_token');
+        localStorage.removeItem('nexorago_admin_token');
       }
       throw new Error(data.error || 'Request failed');
     }
@@ -340,7 +340,7 @@ async function submitApplication(e) {
       kyc_fee: result.kyc_fee,
     };
 
-    localStorage.setItem('visago_last_ref', currentOrder.order_number);
+    localStorage.setItem('nexorago_last_ref', currentOrder.order_number);
 
     const ref = currentOrder.order_number;
     document.getElementById('success-details').innerHTML = `
@@ -631,7 +631,7 @@ async function adminLogin(e) {
       }),
     });
     adminToken = result.token;
-    localStorage.setItem('visago_admin_token', adminToken);
+    localStorage.setItem('nexorago_admin_token', adminToken);
     document.getElementById('admin-login').style.display = 'none';
     document.getElementById('admin-dashboard').style.display = 'block';
     loadAdminDashboard();
@@ -644,7 +644,7 @@ async function logoutAdmin() {
     if (adminToken) await api('/api/admin/logout', { method: 'POST', body: '{}' });
   } catch (e) { /* ignore */ }
   adminToken = null;
-  localStorage.removeItem('visago_admin_token');
+  localStorage.removeItem('nexorago_admin_token');
   document.getElementById('admin-login').style.display = 'block';
   document.getElementById('admin-dashboard').style.display = 'none';
 }
@@ -712,6 +712,7 @@ async function loadAdminOrders() {
                   <option value="completed">Approve (open KYC)</option>
                   <option value="rejected">Rejected</option>
                 </select>
+                <button type="button" class="btn btn-sm btn-outline" style="margin-left:0.35rem;" onclick="copyTrackId('${escapeHtml(o.order_number)}')">Copy Track ID</button>
                 ${o.order_status === 'completed' ? `<button type="button" class="btn btn-sm btn-outline" style="margin-left:0.35rem;" onclick="copyKycLink('${escapeHtml(o.order_number)}')">Copy KYC link</button>` : ''}
               </td>
             </tr>
@@ -739,6 +740,12 @@ async function updateOrderStatus(orderId, status) {
   } catch (e) { /* handled */ }
 }
 
+function copyTrackId(orderNumber) {
+  navigator.clipboard?.writeText(orderNumber)
+    .then(() => showToast('Tracking ID copied', 'success'))
+    .catch(() => prompt('Copy this Tracking ID:', orderNumber));
+}
+
 function copyKycLink(orderNumber) {
   const url = `${window.location.origin}/track?ref=${encodeURIComponent(orderNumber)}`;
   navigator.clipboard?.writeText(url)
@@ -751,7 +758,7 @@ function openTrackFromRef(ref) {
   if (!clean) return;
   const input = document.getElementById('track-order-id');
   if (input) input.value = clean;
-  localStorage.setItem('visago_last_ref', clean);
+  localStorage.setItem('nexorago_last_ref', clean);
   showView('track');
   // slight delay so track view is visible before fetch
   setTimeout(() => trackOrder(), 50);
@@ -834,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openTrackFromRef(ref);
   } else {
     showView('home');
-    const last = localStorage.getItem('visago_last_ref');
+    const last = localStorage.getItem('nexorago_last_ref');
     if (last) {
       const input = document.getElementById('track-order-id');
       if (input && !input.value) input.value = last;

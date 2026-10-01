@@ -5,7 +5,7 @@ const crypto = require('crypto');
 
 const DATA_DIR = process.env.DATA_DIR
   || ((process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME)
-    ? path.join('/tmp', 'visago-data')
+    ? path.join('/tmp', 'nexorago-data')
     : path.join(__dirname, '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -171,7 +171,7 @@ for (const v of VISA_DATA) {
 }
 
 const adminUser = process.env.ADMIN_USER || 'admin';
-const adminPass = process.env.ADMIN_PASS || 'VisaGo2026!';
+const adminPass = process.env.ADMIN_PASS || 'NexoraGo2026!';
 db.prepare(`
   INSERT OR IGNORE INTO admin_users (username, password_hash) VALUES (?, ?)
 `).run(adminUser, hashPassword(adminPass));

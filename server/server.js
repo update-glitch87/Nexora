@@ -88,7 +88,7 @@ function kycFeeFor(visa, order = {}) {
 // ── Public API ──
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'VisaGo', time: new Date().toISOString() });
+  res.json({ ok: true, service: 'NexoraGo', time: new Date().toISOString() });
 });
 
 app.get('/api/visas', (req, res) => {
@@ -568,7 +568,7 @@ if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   const HOST = process.env.HOST || '0.0.0.0';
   app.listen(PORT, HOST, () => {
-    console.log(`\n  VisaGo live at http://localhost:${PORT}`);
+    console.log(`\n  NexoraGo live at http://localhost:${PORT}`);
     console.log(`  Bound to ${HOST}:${PORT}\n`);
   });
 }
