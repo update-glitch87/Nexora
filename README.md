@@ -8,7 +8,7 @@ Professional visa assessment platform: choose a destination, submit a short form
 - One-page short assessment form (no prices in the user flow)
 - Tracking ID with copy + Track page
 - Admin approve unlocks KYC; dummy card fee ($1 / $10 / $100) then document upload
-- SQLite via `sql.js` in-process, with **Turso** as the durable store for applications (orders survive Netlify redeploys)
+- SQLite via `sql.js` in-process, with **Turso** as the durable store for applications (orders survive Vercel/Netlify redeploys)
 
 ## Requirements
 
@@ -46,47 +46,42 @@ ADMIN_PASS=your-secure-password
 
 KYC link format: `/track?ref=VSA-...`
 
-## Deploy on Netlify (free)
+## Deploy on Vercel (recommended)
 
-This app is set up for **Netlify**: static `public/` + serverless Express API.
+Static `public/` + Express API in `api/index.js` (`vercel.json` routes `/api/*`).
 
 1. Push to GitHub: `https://github.com/update-glitch87/Nexora`
-2. Go to [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import from Git**
-3. Select **Nexora**
-4. Build settings (auto from `netlify.toml`):
-   - **Build command:** `npm install`
-   - **Publish directory:** `public`
-   - **Functions directory:** `netlify/functions`
-   - **Node version:** `22`
-5. Site settings → Environment variables (optional):
-   - `ADMIN_USER` = `admin`
-   - `ADMIN_PASS` = your password
-6. Deploy
+2. Go to [vercel.com](https://vercel.com) → **Add New** → **Project** → import **Nexora**
+3. Framework preset: **Other** (no build command needed — uses `vercel.json`)
+4. **Environment variables** (Production + Preview):
 
-After deploy, open your `*.netlify.app` URL.
+   | Name | Value |
+   |------|--------|
+   | `TURSO_DATABASE_URL` | `libsql://…turso.io` |
+   | `TURSO_AUTH_TOKEN` | your Turso token (mark as **Secret**) |
+   | `ADMIN_USER` | `admin` |
+   | `ADMIN_PASS` | your admin password (Secret) |
+
+5. Click **Deploy**
+
+After deploy, open your `*.vercel.app` URL. Check: `/api/health` should show `"platform":"vercel"` and `"persistence":"turso"`.
+
+**Admin:** open `/admin82832783` (not linked in the nav).
 
 **Notes**
-### Required: Turso (so applications never disappear)
+- Turso is required on Vercel — without it, applications can reset on cold starts.
+- KYC file uploads use `/tmp` on serverless; application **records** stay in Turso.
+- Migrations never drop user applications.
+
+### Required: Turso
 
 1. Create a free DB at [turso.tech](https://turso.tech)
-2. In **Netlify → Site settings → Environment variables**, add:
-   - `TURSO_DATABASE_URL` = `libsql://…turso.io`
-   - `TURSO_AUTH_TOKEN` = your token
-3. Redeploy the site after saving variables
+2. Add `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` in Vercel env vars
+3. Redeploy after saving variables
 
-Without these, applications can reset when Netlify cold-starts.
-- Migrations are additive only — `orders` / `kyc_verifications` are protected and cannot be dropped by updates.
-- KYC uploaded files still use `/tmp` on Netlify (file binaries can reset); the application records themselves stay.
-- Local still works with `npm start` (Express on port 3000).
+## Deploy on Netlify (alternative)
 
-### CLI deploy (optional)
-
-```bash
-npm i -g netlify-cli
-netlify login
-netlify init
-netlify deploy --prod
-```
+See `netlify.toml` — static `public/` + `netlify/functions/api.js`. Same Turso env vars in Netlify settings.
 
 ## Deploy on Render (alternative)
 
@@ -95,9 +90,13 @@ See `render.yaml` — use if you prefer a always-on Node web service.
 ## Project layout
 
 ```
-server/server.js   API + static host
-server/db.js       SQLite schema + seed visas
+api/index.js       Vercel serverless API entry
+vercel.json        Vercel routes + function config
+server/server.js   Express API (+ static when local)
+server/db.js       SQLite schema + Turso sync
+server/turso.js    Durable applications store
 public/            Frontend (HTML/CSS/JS)
+netlify/           Optional Netlify function
 ```
 
 ## License

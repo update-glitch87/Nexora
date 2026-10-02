@@ -4,6 +4,11 @@ const fs = require('fs');
 const crypto = require('crypto');
 const appsStore = require('./apps-store');
 const turso = require('./turso');
+const { isServerless, isNetlifyBlobs, platformLabel } = require('./runtime');
+
+function IS_NETLIFY_BLOBS() {
+  return isNetlifyBlobs();
+}
 
 /** Load local .env without a dependency (never commit secrets) */
 (function loadDotEnv() {
@@ -25,9 +30,9 @@ const turso = require('./turso');
   } catch { /* ignore */ }
 })();
 
-const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY_BLOBS_CONTEXT);
+const IS_SERVERLESS = isServerless();
 const DATA_DIR = process.env.DATA_DIR
-  || (IS_NETLIFY
+  || (IS_SERVERLESS
     ? path.join('/tmp', 'nexorago-data')
     : path.join(__dirname, '..', 'data'));
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -73,7 +78,7 @@ function resolveWasm() {
 }
 
 function getBlobStore() {
-  if (!IS_NETLIFY) return null;
+  if (!IS_NETLIFY_BLOBS()) return null;
   try {
     const { getStore } = require('@netlify/blobs');
     // After connectLambda(event) in the function handler, this uses site credentials.
@@ -97,7 +102,7 @@ async function loadPersistentBytes() {
     } catch (err) {
       console.error('[DB] Blob load failed:', err.message);
     }
-  } else if (IS_NETLIFY) {
+  } else if (IS_NETLIFY_BLOBS()) {
     console.error('[DB] WARNING: Blobs store null — applications may not persist');
   }
 
@@ -128,7 +133,7 @@ async function savePersistentBytes(bytes) {
     } catch (err) {
       console.error('[DB] sqlite Blob save failed:', err.message);
     }
-  } else if (IS_NETLIFY) {
+  } else if (IS_NETLIFY_BLOBS()) {
     console.error('[DB] WARNING: sqlite Blobs store null');
   }
 
@@ -553,7 +558,7 @@ function seed(db) {
   console.log(`[DB] Admin login: ${adminUser} / (set ADMIN_PASS to change)`);
   const persistence = turso.hasTursoConfig()
     ? 'turso'
-    : (IS_NETLIFY ? 'netlify-blobs+/tmp' : 'local-disk');
+    : (IS_SERVERLESS ? `${platformLabel()}-ephemeral` : 'local-disk');
   console.log(`[DB] Persistence: ${persistence}`);
 }
 

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/track", "destination": "/" },
+    { "source": "/admin82832783", "destination": "/" }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "node_modules/sql.js/dist/sql-wasm.wasm",
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
+}

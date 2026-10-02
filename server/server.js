@@ -6,19 +6,20 @@ const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const db = require('./db');
 const { DESTINATION_CITIES, HOME_CITIES, JOB_TITLES } = require('./cities');
+const { isServerless, platformLabel } = require('./runtime');
 
 const app = express();
-const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const IS_SERVERLESS = isServerless();
 const UPLOAD_DIR = process.env.UPLOAD_DIR
-  || (IS_NETLIFY ? path.join('/tmp', 'uploads', 'kyc') : path.join(__dirname, '..', 'public', 'uploads', 'kyc'));
+  || (IS_SERVERLESS ? path.join('/tmp', 'uploads', 'kyc') : path.join(__dirname, '..', 'public', 'uploads', 'kyc'));
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Local/Render: serve static. Netlify serves public/ separately.
-if (!IS_NETLIFY) {
+// Local/Render: serve static. Vercel/Netlify serve public/ separately.
+if (!IS_SERVERLESS) {
   app.use(express.static(path.join(__dirname, '..', 'public')));
 }
 
@@ -135,9 +136,8 @@ app.get('/api/health', (req, res) => {
     ok: true,
     service: 'NexoraGo',
     applications,
-    persistence: hasTurso
-      ? 'turso'
-      : ((process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) ? 'netlify-blobs' : 'local-disk'),
+    platform: platformLabel(),
+    persistence: hasTurso ? 'turso' : (IS_SERVERLESS ? 'serverless-ephemeral' : 'local-disk'),
     time: new Date().toISOString(),
   });
 });
@@ -771,7 +771,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error' });
 });
 
-if (!IS_NETLIFY) {
+if (!IS_SERVERLESS) {
   app.get('/track', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
   });

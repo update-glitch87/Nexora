@@ -5,16 +5,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const IS_NETLIFY = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY_BLOBS_CONTEXT);
+const { isServerless, isNetlifyBlobs } = require('./runtime');
+const IS_SERVERLESS = isServerless();
 const APPS_BLOB_KEY = 'applications-v1.json';
 const LOCAL_APPS_PATH = path.join(
   process.env.DATA_DIR
-    || (IS_NETLIFY ? path.join('/tmp', 'nexorago-data') : path.join(__dirname, '..', 'data')),
+    || (IS_SERVERLESS ? path.join('/tmp', 'nexorago-data') : path.join(__dirname, '..', 'data')),
   'applications-v1.json'
 );
 
 function getStore() {
-  if (!IS_NETLIFY) return null;
+  if (!isNetlifyBlobs()) return null;
   try {
     const { getStore } = require('@netlify/blobs');
     return getStore({ name: 'nexorago-apps', consistency: 'strong' });
@@ -125,7 +126,9 @@ async function saveAppsBackup(db) {
 
   const store = getStore();
   if (!store) {
-    if (IS_NETLIFY) console.error('[APPS] WARNING: Blobs store unavailable — apps may not survive cold start');
+    if (isNetlifyBlobs()) {
+      console.error('[APPS] WARNING: Blobs store unavailable — apps may not survive cold start');
+    }
     return payload.orders.length;
   }
   try {
@@ -141,5 +144,5 @@ module.exports = {
   loadAppsBackup,
   saveAppsBackup,
   restoreAppsIntoDb,
-  IS_NETLIFY,
+  IS_SERVERLESS,
 };
